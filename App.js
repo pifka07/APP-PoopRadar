@@ -115,6 +115,11 @@ export default function App() {
   const [displayName, setDisplayName] = useState("Gast-Modus");
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameInput, setEditNameInput] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [nicknameInput, setNicknameInput] = useState('');
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [publishInList, setPublishInList] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [stats, setStats] = useState({ 
     points: 0, total: 0, clean: 0, poison: 0, bins: 0, cityCount: 0, sizeTypes: 0, level: 1, levelName: "Gehweg-Novize"
   });
@@ -395,6 +400,7 @@ export default function App() {
           await updateProfileData(session);
         }
         await setupApp();
+        await loadLeaderboard();
         if (sessionRef.current) {
           await registerPushToken(sessionRef.current);
         }
@@ -425,6 +431,7 @@ export default function App() {
       setSession(session);
       if (session) {
         updateProfileData(session);
+        loadLeaderboard();
         registerPushToken(session).catch((e) => console.log('Push-Token Fehler:', e));
       }
     });
@@ -442,6 +449,8 @@ export default function App() {
       setStats({ points: 0, total: 0, clean: 0, poison: 0, bins: 0, cityCount: 0, sizeTypes: 0, level: 1, levelName: "Gehweg-Novize", rank: '-', userCount: '-' });
       return;
     }
+
+    await createProfileRowIfMissing(sess);
 
     try {
       let { data, error } = await supabase
@@ -527,6 +536,9 @@ export default function App() {
         const metaName = sess.user.user_metadata?.display_name;
         const fallbackName = sess.user?.email ? sess.user.email.split('@')[0] : "User";
         setDisplayName(metaName || fallbackName);
+        setNickname(data.nickname || '');
+        setNicknameInput(data.nickname || '');
+        setPublishInList(data.publish_in_list === true);
       }
     } catch (err) {
       console.log("Fehler beim Ranking-Check:", err);
@@ -768,11 +780,17 @@ export default function App() {
           if (nearbyPoop.length > 0) parts.push(`${nearbyPoop.length} Haufen`);
           if (nearbyPoison.length > 0) parts.push(`${nearbyPoison.length} Giftköder`);
 
+          const alertBody = nearbyPoop.length > 0
+            ? `Pass auf deine Snicker auf. In 500m Naehe gefunden: ${parts.join(', ')}`
+            : `Achtung: ${parts.join(', ')}`;
+
+          Alert.alert('Achtung', alertBody);
+
           try {
             await Notifications.scheduleNotificationAsync({
               content: {
                 title: 'Umgebungscheck beim Start',
-                body: `In 500m Naehe gefunden: ${parts.join(', ')}`,
+                body: alertBody,
                 sound: 'default',
                 ...(Platform.OS === 'android' ? { channelId: 'poop-alerts' } : {}),
               },
@@ -803,6 +821,88 @@ export default function App() {
     const { error } = await supabase.auth.updateUser({ data: { display_name: editNameInput.trim() } });
     setIsLoading(false);
     if (!error) { setDisplayName(editNameInput.trim()); setIsEditingName(false); }
+  };
+
+  const createProfileRowIfMissing = async (sess) => {
+    if (!sess?.user?.id) return;
+    const profileRow = {
+      id: sess.user.id,
+      points: 0,
+      total_reports: 0,
+      clean_count: 0,
+      publish_in_list: false,
+      nickname: '',
+    };
+
+    const { error } = await supabase.from('profiles').insert([profileRow]);
+    if (error) {
+      const message = String(error.message || '');
+      if (message.toLowerCase().includes('duplicate') || message.toLowerCase().includes('unique')) {
+        return;
+      }
+
+      console.log('Profil-Erstellung mit optionalen Feldern fehlgeschlagen:', error.message);
+      const fallbackRow = { id: sess.user.id, points: 0, total_reports: 0, clean_count: 0 };
+      const { error: fallbackError } = await supabase.from('profiles').insert([fallbackRow]);
+      if (fallbackError && !String(fallbackError.message || '').toLowerCase().includes('duplicate')) {
+        console.log('Fallback Profilerstellung fehlgeschlagen:', fallbackError.message);
+      }
+    }
+  };
+
+  const loadLeaderboard = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('points', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.log('Fehler beim Laden der Bestenliste:', error.message);
+        return;
+      }
+
+      const leaderboardItems = (data || [])
+        .filter((item) => item.publish_in_list === true)
+        .sort((a, b) => (b.points || 0) - (a.points || 0) || (b.total_reports || 0) - (a.total_reports || 0))
+        .slice(0, 20)
+        .map((item, index) => ({
+          id: item.id,
+          rank: index + 1,
+          nickname: item.nickname || item.display_name || `User ${index + 1}`,
+          points: item.points || 0,
+          totalReports: item.total_reports || 0,
+        }));
+
+      setLeaderboard(leaderboardItems);
+    } catch (error) {
+      console.log('Leaderboard laden fehlgeschlagen:', error);
+    }
+  };
+
+  const saveProfileSettings = async () => {
+    if (!session) return;
+    setIsLoading(true);
+    const trimmedNickname = nicknameInput.trim();
+    const updatePayload = {
+      nickname: trimmedNickname,
+      publish_in_list: publishInList,
+    };
+
+    const { error } = await supabase.from('profiles').update(updatePayload).eq('id', session.user.id);
+    setIsLoading(false);
+
+    if (error) {
+      console.log('Fehler beim Speichern der Profil-Einstellungen:', error.message);
+      Alert.alert('Fehler', 'Profil-Einstellungen konnten nicht gespeichert werden.');
+      return;
+    }
+
+    setNickname(trimmedNickname);
+    setNicknameInput(trimmedNickname);
+    setIsEditingNickname(false);
+    loadLeaderboard();
   };
 
   const jumpToCity = (cityName) => {
@@ -1060,13 +1160,38 @@ export default function App() {
         </View>
       )}
 
+      {activeTab === 'Top' && (
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreTitle}>🥇 Top 20 Melder</Text>
+          <Text style={styles.scoreSubTitle}>Nur Profile mit freigegebenen Nicknames</Text>
+          <FlatList
+            data={leaderboard}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={[styles.scoreItem, styles.shadow]}>
+                <Text style={styles.scoreRank}>#{item.rank}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600' }}>{item.nickname}</Text>
+                  <Text style={{ color: '#666', marginTop: 4 }}>{item.totalReports} Meldungen • {item.points} XP</Text>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={() => (
+              <View style={[styles.scoreItem, styles.shadow, { justifyContent: 'center' }]}>
+                <Text style={{ fontSize: 16, color: '#666', textAlign: 'center' }}>Noch keine freigegebenen Melder in der Bestenliste.</Text>
+              </View>
+            )}
+          />
+        </View>
+      )}
+
       {activeTab === 'Profil' && (
         <ScrollView style={styles.profileScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.profileHeaderCenter}>
             <View style={[styles.avatarLarge, styles.shadow]}>
               <Text style={styles.avatarTextLarge}>{displayName.charAt(0).toUpperCase()}</Text>
             </View>
-            
+
             {isEditingName ? (
               <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 15}}>
                 <TextInput style={styles.nameEditInput} value={editNameInput} onChangeText={setEditNameInput} autoFocus placeholder="Dein Name" />
@@ -1084,6 +1209,34 @@ export default function App() {
             )}
             <Text style={styles.profileEmailSub}>{session?.user?.email || "Melde dich an für mehr XP"}</Text>
           </View>
+
+          {session && (
+            <View style={[styles.notificationSection, styles.shadow, { marginBottom: 25 }]}> 
+              <Text style={styles.notificationSectionTitle}>Profil für Bestenliste</Text>
+              <TextInput
+                style={styles.inputField}
+                value={nicknameInput}
+                onChangeText={setNicknameInput}
+                placeholder="Dein Nickname"
+                autoCapitalize="words"
+              />
+              <View style={styles.settingRow}>
+                <View style={styles.settingCopy}>
+                  <Text style={styles.settingTitle}>Veröffentlichung erlauben</Text>
+                  <Text style={styles.settingHint}>Zeige deinen Nickname in der Top 20 Liste.</Text>
+                </View>
+                <Switch
+                  value={publishInList}
+                  onValueChange={setPublishInList}
+                  trackColor={{ false: '#D8D8D8', true: '#CBA27A' }}
+                  thumbColor={publishInList ? '#8B4513' : '#F4F4F4'}
+                />
+              </View>
+              <TouchableOpacity style={[styles.mainReportBtn, { backgroundColor: '#8B4513', marginTop: 8 }]} onPress={saveProfileSettings}>
+                <Text style={styles.mainReportBtnText}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={[styles.rankingCard, styles.shadow]}>
             <Text style={styles.rankLabel}>🏆 DEUTSCHLANDWEIT</Text>
@@ -1220,7 +1373,7 @@ export default function App() {
               <Text style={styles.footerLink}>Datenschutz & Impressum</Text>
             </TouchableOpacity>
             {session && (
-              <TouchableOpacity onPress={deleteAccount} style={[styles.authMainTrigger, {backgroundColor: '#d9534f', marginBottom: 10}]}>
+              <TouchableOpacity onPress={deleteAccount} style={[styles.authMainTrigger, {backgroundColor: '#d9534f', marginBottom: 10}]}> 
                 <Text style={styles.authMainTriggerText}>ACCOUNT LÖSCHEN</Text>
               </TouchableOpacity>
             )}
@@ -1237,9 +1390,9 @@ export default function App() {
       )}
 
       <View style={styles.navbar}>
-        {['Radar', 'Score', 'Profil'].map(t => (
+        {['Radar', 'Score', 'Top', 'Profil'].map(t => (
           <TouchableOpacity key={t} onPress={() => setActiveTab(t)} style={styles.navItem}>
-            <Text style={{fontSize: 22, opacity: activeTab === t ? 1 : 0.4}}>{t === 'Radar' ? '🗺️' : (t === 'Score' ? '🏆' : '👀')}</Text>
+            <Text style={{fontSize: 22, opacity: activeTab === t ? 1 : 0.4}}>{t === 'Radar' ? '🗺️' : (t === 'Score' ? '🏆' : (t === 'Top' ? '🥇' : '👀'))}</Text>
             <Text style={[styles.navText, {color: activeTab === t ? '#8B4513' : '#999'}]}>{t}</Text>
           </TouchableOpacity>
         ))}

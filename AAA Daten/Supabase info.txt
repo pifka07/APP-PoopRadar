@@ -1,6 +1,0 @@
-Supanow Token:
-sbp_v0_c8b416dcc987cea1f12040f8663488c0a18a013d
-
-Google Play Store SHA-1 Schlüssel:
-DF:F2:B1:39:A6:06:03:7C:DF:3E:E9:A0:9B:84:C5:4B:AA:15:9A:E7
-

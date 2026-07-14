@@ -11,6 +11,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "*",
+    "@types/react": "~19.1.10",
     "base64-arraybuffer": "*",
     "expo": "~54.0.33",
     "expo-av": "^16.0.8",
@@ -25,7 +26,8 @@
     "react-native-google-mobile-ads": "^16.3.2",
     "react-native-maps": "1.20.1",
     "react-native-paper": "4.9.2",
-    "react-native-url-polyfill": "^3.0.0"
+    "react-native-url-polyfill": "^3.0.0",
+    "typescript": "~5.9.2"
   },
   "private": true,
   "name": "PoopRadar",
