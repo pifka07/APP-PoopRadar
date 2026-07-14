@@ -1,8 +1,11 @@
 {
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-2590841526378095~3764279944"
+  },
   "expo": {
-    "name": "poop-radar",
+    "name": "Poop Radar",
     "slug": "snack-35410476-aebc-43a0-809d-a39274281671",
-    "version": "1.0.0",
+    "version": "1.2.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,17 +16,65 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pifka.poopradar",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Wir benötigen deinen Standort, um Haufen in deiner Nähe auf dem Radar anzuzeigen."
+      },
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-2590841526378095~3764279944"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.pifka.poopradar",
+      "permissions": [
+        "com.google.android.gms.permission.AD_ID",
+        "POST_NOTIFICATIONS",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "VIBRATE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDFVR8qhVCcWtr9tEa7-NjVwMPjOHw2a7E"
+        },
+        "googleMobileAdsAppId": "ca-app-pub-2590841526378095~3764279944"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "744de408-fcd0-4202-a2f7-43fdeecf95c8"
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#8B4513",
+          "modes": [
+            "productionMode"
+          ]
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-2590841526378095~3764279944",
+          "iosAppId": "ca-app-pub-2590841526378095~3764279944"
+        }
+      ]
+    ]
   }
 }
+  
+

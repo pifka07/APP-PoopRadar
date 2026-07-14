@@ -1,0 +1,1046 @@
+// URL-Polyfill für Supabase Realtime (MUSS GANZ OBEN STEHEN)
+import 'react-native-url-polyfill/auto';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator, TextInput, Vibration, ScrollView, FlatList, Modal, Platform, KeyboardAvoidingView, Linking, Switch } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Audio } from 'expo-av';
+import * as Notifications from 'expo-notifications';
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { datenschutzText, impressumText } from './legalTexts';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+// --- SUPABASE SETUP ---
+const supabaseUrl = 'https://jpzkqatezxnbawcsvgux.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwemtxYXRlenhuYmF3Y3N2Z3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNTQ3MTMsImV4cCI6MjA4ODgzMDcxM30._w0GheLM-aTWGdA6hsozokTAgdUOUlwsqEflgCC-xiU'; 
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+
+const REPORT_VIBRATION_STORAGE_KEY = 'reportFeedback.vibrationEnabled';
+const REPORT_SOUND_STORAGE_KEY = 'reportFeedback.soundEnabled';
+
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showAuth, setShowAuth] = useState(false);
+  const [location, setLocation] = useState(null);
+  const [currentCity, setCurrentCity] = useState("Ortung...");
+  const [markers, setMarkers] = useState([]);
+  const [cityStats, setCityStats] = useState([]);
+  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedPoop, setSelectedPoop] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Radar');
+  const [displayName, setDisplayName] = useState("Gast-Modus");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameInput, setEditNameInput] = useState('');
+  const [stats, setStats] = useState({ 
+    points: 0, total: 0, clean: 0, monster: 0, mini: 0, cityCount: 0, sizeTypes: 0, level: 1, levelName: "Gehweg-Novize"
+  });
+  const [legalVisible, setLegalVisible] = useState(false);
+  const [legalContent, setLegalContent] = useState({ title: '', text: '' });
+  const [lastMarkerSyncTime, setLastMarkerSyncTime] = useState(null);
+  const [notificationStatus, setNotificationStatus] = useState('unknown');
+  const [reportVibrationEnabled, setReportVibrationEnabled] = useState(true);
+  const [reportSoundEnabled, setReportSoundEnabled] = useState(true);
+
+  const registerNotificationPermissions = async () => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      setNotificationStatus(finalStatus || 'denied');
+
+      if (finalStatus !== 'granted') {
+        console.log('Benachrichtigungen nicht erlaubt');
+        return false;
+      }
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('poop-alerts', {
+          name: 'Poop Radar Benachrichtigungen',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          sound: 'default',
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF6600',
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.log('Notification registration failed:', error);
+      setNotificationStatus('denied');
+      return false;
+    }
+  };
+
+  const refreshNotificationStatus = async () => {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setNotificationStatus(status || 'denied');
+    } catch (error) {
+      console.log('Fehler beim Abfragen von Notification Permissions:', error);
+      setNotificationStatus('denied');
+    }
+  };
+
+  const openNotificationSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch (error) {
+      console.log('Konnte Einstellungen nicht öffnen:', error);
+      Alert.alert('Info', 'Bitte öffne die Benachrichtigungseinstellungen manuell.');
+    }
+  };
+
+  const loadReportFeedbackSettings = async () => {
+    try {
+      const values = await AsyncStorage.multiGet([
+        REPORT_VIBRATION_STORAGE_KEY,
+        REPORT_SOUND_STORAGE_KEY,
+      ]);
+      const storedValues = Object.fromEntries(values);
+
+      if (storedValues[REPORT_VIBRATION_STORAGE_KEY] !== null) {
+        setReportVibrationEnabled(JSON.parse(storedValues[REPORT_VIBRATION_STORAGE_KEY]));
+      }
+
+      if (storedValues[REPORT_SOUND_STORAGE_KEY] !== null) {
+        setReportSoundEnabled(JSON.parse(storedValues[REPORT_SOUND_STORAGE_KEY]));
+      }
+    } catch (error) {
+      console.log('Fehler beim Laden der Feedback-Einstellungen:', error);
+    }
+  };
+
+  const saveReportFeedbackSetting = async (storageKey, value, setter) => {
+    setter(value);
+
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(value));
+    } catch (error) {
+      console.log('Fehler beim Speichern der Feedback-Einstellung:', error);
+    }
+  };
+
+  const playReportFeedback = async () => {
+    if (reportVibrationEnabled) {
+      Vibration.vibrate(70);
+    }
+
+    if (!reportSoundEnabled) {
+      return;
+    }
+
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('./assets/sounds/report-beep.wav'),
+        {
+          shouldPlay: true,
+          volume: 0.35,
+        }
+      );
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (error) {
+      console.log('Fehler beim Abspielen des Meldetons:', error);
+    }
+  };
+
+  const badgeDefinitions = [
+    { id: 'first-fund', title: 'Erster Fund', subtitle: 'Ersten Haufen gemeldet', icon: '🎉', achieved: stats.total >= 1 },
+    { id: 'beginner', title: 'Anfänger', subtitle: '50 Punkte erreicht', icon: '⭐', achieved: stats.points >= 50 },
+    { id: 'advanced', title: 'Fortgeschritten', subtitle: '200 Punkte erreicht', icon: '🚀', achieved: stats.points >= 200 },
+    { id: 'expert', title: 'Experte', subtitle: '500 Punkte erreicht', icon: '🏆', achieved: stats.points >= 500 },
+    { id: 'cleaner', title: 'Saubermann', subtitle: 'Ersten Haufen weggeräumt', icon: '🧹', achieved: stats.clean >= 1 },
+    { id: 'hero', title: 'Held', subtitle: '25x weggeräumt', icon: '🦸', achieved: stats.clean >= 25 },
+    { id: 'eagle-eye', title: 'Adlerauge', subtitle: 'Ersten Mini-Haufen gefunden', icon: '🦅', achieved: stats.mini >= 1 },
+    { id: 'elephant-hunter', title: 'Elefantenjäger', subtitle: 'Ersten Monster-Haufen gefunden', icon: '🐘', achieved: stats.monster >= 1 },
+    { id: 'collector', title: 'Sammler', subtitle: 'Alle Größen gefunden', icon: '🎯', achieved: stats.sizeTypes >= 3 },
+    { id: 'globetrotter', title: 'Weltenbummler', subtitle: 'In 10 verschiedenen Städten gemeldet', icon: '🌍', achieved: stats.cityCount >= 10 },
+    { id: 'legend', title: 'Legende', subtitle: '1000 Punkte erreicht', icon: '👑', achieved: stats.points >= 1000 },
+  ];
+
+  const mapRef = useRef(null);
+  const pendingRegionRef = useRef(null);
+  const locationWatcher = useRef(null);
+  const notifiedReportIds = useRef(new Set());
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && isMounted) {
+          setSession(session);
+          await updateProfileData(session);
+        }
+        await setupApp();
+      } catch (err) {
+        console.log("Startfehler:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    init();
+
+    const channel = supabase
+      .channel('schema-db-changes') // Eindeutiger Name
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'reports' }, 
+        async () => {
+          await checkNearbyReports();
+          await fetchAllMarkers();
+        }
+      )
+      .subscribe();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) updateProfileData(session);
+    });
+
+    return () => {
+      isMounted = false;
+      if (authListener?.subscription) authListener.subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
+      if (locationWatcher.current) locationWatcher.current.remove();
+    };
+  }, []);
+
+  const updateProfileData = async (sess) => {
+    if (!sess?.user) {
+      setStats({ points: 0, total: 0, clean: 0, level: 1, levelName: "Gehweg-Novize", rank: '-', userCount: '-' });
+      return;
+    }
+
+    try {
+      let { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', sess.user.id)
+        .single();
+
+      if (error || !data) {
+        const { data: newData, error: insertError } = await supabase
+          .from('profiles')
+          .insert([{ id: sess.user.id, points: 0, total_reports: 0, clean_count: 0 }])
+          .select().single();
+        if (insertError) return;
+        data = newData;
+      }
+
+      const { count: higherRanked } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gt('points', data.points || 0);
+
+      const { count: totalUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      let miniCount = 0;
+      let monsterCount = 0;
+      let cityCount = 0;
+      let sizeTypes = 0;
+
+      let userReports;
+      let reportsError;
+
+      try {
+        const result = await supabase
+          .from('reports')
+          .select('size, city')
+          .eq('user_id', sess.user.id);
+        userReports = result.data;
+        reportsError = result.error;
+      } catch (err) {
+        reportsError = err;
+      }
+
+      if ((!userReports || reportsError)) {
+        const result = await supabase.from('reports').select('size, city');
+        userReports = result.data;
+        reportsError = result.error;
+      }
+
+      if (userReports && !reportsError) {
+        const cities = new Set();
+        const sizes = new Set();
+
+        userReports.forEach((report) => {
+          if (report?.city) cities.add(report.city);
+          if (report?.size) sizes.add(report.size);
+          if (report?.size === 'S') miniCount += 1;
+          if (report?.size === 'L') monsterCount += 1;
+        });
+
+        cityCount = cities.size;
+        sizeTypes = sizes.size;
+      }
+
+      if (data) {
+        setStats({
+          points: data.points || 0,
+          total: data.total_reports || 0,
+          clean: data.clean_count || 0,
+          monster: monsterCount,
+          mini: miniCount,
+          cityCount,
+          sizeTypes,
+          level: Math.floor((data.points || 0) / 100) + 1,
+          levelName: (data.points || 0) > 500 ? "Haufen-Hunter" : "Gehweg-Novize",
+          rank: (higherRanked || 0) + 1,
+          userCount: totalUsers || 1
+        });
+        
+        const metaName = sess.user.user_metadata?.display_name;
+        const fallbackName = sess.user?.email ? sess.user.email.split('@')[0] : "User";
+        setDisplayName(metaName || fallbackName);
+      }
+    } catch (err) {
+      console.log("Fehler beim Ranking-Check:", err);
+    }
+  };
+
+  const deleteAccount = async () => {
+    Alert.alert(
+      "Account löschen",
+      "Sind Sie sicher, dass Sie Ihren Account und alle Daten löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      [
+        { text: "Abbrechen", style: "cancel" },
+        { text: "Löschen", style: "destructive", onPress: async () => {
+          try {
+            // Lösche alle Reports des Users
+            await supabase.from('reports').delete().eq('user_id', session.user.id);
+            // Lösche Profil
+            await supabase.from('profiles').delete().eq('id', session.user.id);
+            // Logout
+            await supabase.auth.signOut();
+            Alert.alert("Account gelöscht", "Ihr Account und alle Daten wurden erfolgreich gelöscht.");
+          } catch (error) {
+            console.log("Fehler beim Löschen:", error);
+            Alert.alert("Fehler", "Beim Löschen ist ein Fehler aufgetreten.");
+          }
+        }}
+      ]
+    );
+  };
+
+  const setupApp = async () => {
+    try {
+      await registerNotificationPermissions();
+      await refreshNotificationStatus();
+      await loadReportFeedbackSettings();
+
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+      } catch (audioError) {
+        console.log('Audio-Modus konnte nicht gesetzt werden:', audioError);
+      }
+
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { setIsLoading(false); return; }
+      
+      const currentLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setLocation(currentLoc.coords);
+      try {
+        let rev = await Location.reverseGeocodeAsync(currentLoc.coords);
+        if (rev[0]?.city) {
+          setCurrentCity(rev[0].city);
+        }
+      } catch (e) {
+        console.log("Geocode Error:", e);
+      }
+
+      locationWatcher.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          distanceInterval: 10,
+        },
+        async (loc) => {
+          setLocation(loc.coords);
+          try {
+            let rev = await Location.reverseGeocodeAsync(loc.coords);
+            if (rev[0]?.city) {
+              setCurrentCity(rev[0].city);
+            }
+          } catch (e) {
+            console.log("Geocode Error:", e);
+          }
+        }
+      );
+
+      fetchAllMarkers();
+    } catch (e) { console.log(e); } finally { setIsLoading(false); }
+  };
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in meters
+  };
+
+  const checkNearbyReports = async () => {
+    if (!location) return;
+
+    try {
+      let query = supabase.from('reports').select('*').order('created_at', { ascending: false }).limit(20);
+
+      if (lastMarkerSyncTime) {
+        query = query.gt('created_at', lastMarkerSyncTime);
+      }
+
+      const { data: newReports, error } = await query;
+      if (error) {
+        console.log('Fehler beim Abfragen neuer Reports:', error);
+        return;
+      }
+
+      if (newReports && newReports.length > 0) {
+        for (const report of newReports) {
+          if (!report?.id || notifiedReportIds.current.has(report.id)) continue;
+
+          const lat = parseFloat(report.latitude);
+          const lng = parseFloat(report.longitude);
+          if (isNaN(lat) || isNaN(lng)) continue;
+
+          const distance = calculateDistance(
+            location.latitude,
+            location.longitude,
+            lat,
+            lng
+          );
+
+          if (distance < 500) {
+            notifiedReportIds.current.add(report.id);
+            const sizeEmoji = report.size === 'L' ? '🔴' : (report.size === 'M' ? '🟡' : '🟤');
+            const distanceText = distance < 100 ? 'ganz nah' : `${Math.round(distance / 10) * 10}m`;
+
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: '💩 Haufen in der Nähe!',
+                body: `${sizeEmoji} ${distanceText} entfernt in ${report.city}`,
+                sound: 'default',
+              },
+              trigger: { seconds: 1 },
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Fehler bei Benachrichtigungsprüfung:', e);
+    }
+  };
+
+  const fetchAllMarkers = async () => {
+    const { data } = await supabase.from('reports').select('*');
+    if (data) {
+      setMarkers(data);
+      const latestCreatedAt = data
+        .map(item => item.created_at)
+        .filter(Boolean)
+        .sort()
+        .reverse()[0];
+      setLastMarkerSyncTime(latestCreatedAt || new Date().toISOString());
+      data.forEach(item => {
+        if (item?.id) notifiedReportIds.current.add(item.id);
+      });
+      const counts = data.reduce((acc, item) => { 
+        if (item.city && item.city !== "Ortung...") {
+          acc[item.city] = (acc[item.city] || 0) + 1; 
+        }
+        return acc; 
+      }, {});
+      const sorted = Object.keys(counts)
+        .map(city => ({ name: city, count: counts[city] }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20);
+      setCityStats(sorted);
+    }
+  };
+
+  const handleAuth = async (type) => {
+    if (!email || !password) return;
+    setIsLoading(true);
+    const { error } = type === 'login' 
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
+    setIsLoading(false);
+    if (error) Alert.alert("Fehler", error.message);
+    else { setShowAuth(false); setEmail(''); setPassword(''); }
+  };
+
+  const saveName = async () => {
+    if (!session || !editNameInput.trim()) return;
+    setIsLoading(true);
+    const { error } = await supabase.auth.updateUser({ data: { display_name: editNameInput.trim() } });
+    setIsLoading(false);
+    if (!error) { setDisplayName(editNameInput.trim()); setIsEditingName(false); }
+  };
+
+  const jumpToCity = (cityName) => {
+    if (!cityName) return;
+    const normalizedCityName = cityName.trim().toLowerCase();
+    let cityMarker = markers.find(m => m.city?.trim().toLowerCase() === normalizedCityName);
+
+    if (!cityMarker) {
+      cityMarker = markers.find(m => m.city?.trim().toLowerCase().includes(normalizedCityName));
+    }
+
+    if (cityMarker) {
+      const region = {
+        latitude: parseFloat(cityMarker.latitude),
+        longitude: parseFloat(cityMarker.longitude),
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      setActiveTab('Radar');
+      pendingRegionRef.current = region;
+
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(region, 1000);
+        pendingRegionRef.current = null;
+      }
+    }
+  };
+
+  const reportPoop = async () => {
+    if (!session) { Alert.alert("Stop!", "Bitte erst anmelden!"); return; }
+    if (!location || currentCity === "Ortung...") {
+      Alert.alert("Warte...", "Dein Standort wird noch präzisiert.");
+      return;
+    }
+
+    await playReportFeedback();
+    
+    const tempMarker = {
+      id: 'temp-' + Date.now(),
+      latitude: location.latitude,
+      longitude: location.longitude,
+      size: selectedSize,
+      city: currentCity
+    };
+    setMarkers(prevMarkers => [...prevMarkers, tempMarker]);
+
+    const { error: reportError } = await supabase.from('reports').insert([{ 
+      latitude: location.latitude,  // volle Namen nutzen!
+      longitude: location.longitude, 
+      size: selectedSize, 
+      city: currentCity
+    }]);
+
+    if (!reportError) {
+      const reportPoints = selectedSize === 'L' ? 15 : selectedSize === 'M' ? 10 : 5;
+
+      supabase.from('profiles').update({ 
+        points: stats.points + reportPoints, 
+        total_reports: stats.total + 1 
+      }).eq('id', session.user.id).then(() => {
+        updateProfileData(session);
+      });
+      Alert.alert("Erfolg", `Haufen wurde markiert! +${reportPoints} XP 💩`);
+    } else {
+      setMarkers(prevMarkers => prevMarkers.filter(m => m.id !== tempMarker.id));
+      console.log(reportError);
+    }
+  };
+
+  const deletePoop = async () => {
+    if (!session || !selectedPoop) return;
+    
+    const { error: deleteError } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', selectedPoop.id);
+
+    if (!deleteError) {
+        const rewardPoints = 25;
+
+        await supabase
+          .from('profiles')
+          .update({ 
+            points: stats.points + rewardPoints, 
+            clean_count: stats.clean + 1 
+          })
+          .eq('id', session.user.id);
+        
+        setSelectedPoop(null);
+        if (reportVibrationEnabled) {
+          Vibration.vibrate(100);
+        }
+        await updateProfileData(session);
+        Alert.alert("Sauber!", `Du hast ${rewardPoints} XP verdient! 🧹`);
+    }
+  };
+
+  const openLegal = (title, text) => { setLegalContent({ title, text }); setLegalVisible(true); };
+
+  if (isLoading) return <View style={styles.splash}><ActivityIndicator size="large" color="#8B4513" /><Text style={{marginTop: 15, color: '#8B4513', fontWeight: 'bold'}}>Radar lädt...</Text></View>;
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.header, styles.shadow]}>
+        <View><Text style={styles.xpTitle}>{session ? "PROFI" : "GAST"}</Text><Text style={styles.xpValue}>{stats.points} XP | {currentCity}</Text></View>
+      </View>
+
+      {activeTab === 'Radar' && (
+        <View style={{ flex: 1 }}>
+          <View style={[styles.adContainer, styles.shadow]}>
+            <BannerAd
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+              unitId={Platform.OS === 'android'
+                ? 'ca-app-pub-2590841526378095/9563401535'
+                : 'ca-app-pub-3940256099942544/2934735716'}
+              requestOptions={{
+                requestNonPersonalizedAdsOnly: false,
+              }}
+              onAdFailedToLoad={(error) => console.log('AdMob Fehler:', error)}
+            />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <MapView 
+              ref={mapRef} 
+              provider={PROVIDER_GOOGLE}
+              loadingEnabled
+              loadingIndicatorColor="#8B4513"
+              mapType="standard"
+              onMapReady={() => {
+                if (pendingRegionRef.current && mapRef.current) {
+                  mapRef.current.animateToRegion(pendingRegionRef.current, 1000);
+                  pendingRegionRef.current = null;
+                }
+              }}
+              style={styles.map} 
+              showsUserLocation 
+              followsUserLocation={true} 
+              initialRegion={location ? { 
+                latitude: location.latitude, 
+                longitude: location.longitude, 
+                latitudeDelta: 0.005, 
+                longitudeDelta: 0.005 
+              } : {
+                latitude: 49.293, 
+                longitude: 8.684,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05
+              }}
+            > 
+            {markers.map((marker, index) => {
+              const markerKey = marker.id ? marker.id.toString() : `temp-${index}`;
+              const lat = Number(marker.latitude);
+              const lng = Number(marker.longitude);
+
+              // Sicherheitscheck bleibt, damit die App nicht crasht
+              if (!lat || !lng || isNaN(lat) || isNaN(lng)) return null;
+
+              const markerSize = 26;
+              const markerContainerSize = markerSize + 8;
+
+              return (
+                <Marker 
+                  key={markerKey} 
+                  coordinate={{ latitude: lat, longitude: lng }}
+                  onPress={() => setSelectedPoop(marker)}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={{ width: markerContainerSize, height: markerContainerSize, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: markerSize, lineHeight: markerSize, textAlign: 'center' }}>💩</Text>
+                  </View>
+                </Marker>
+              );
+            })}
+          </MapView>
+          </View>
+
+          {selectedPoop ? (
+            <View style={[styles.infoCard, styles.shadow]}>
+              <Text style={styles.infoTitle}>💩 Fund in {selectedPoop.city}</Text>
+              <Text style={{color: '#666', marginBottom: 15, fontWeight: 'bold'}}>
+                Größe: {selectedPoop.size === 'L' ? 'groß' : (selectedPoop.size === 'M' ? 'mittel' : 'klein')}
+              </Text>
+              <TouchableOpacity style={styles.deleteBtn} onPress={deletePoop}>
+                <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>ICH HAB'S WEGGERÄUMT ✅</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedPoop(null)} style={{marginTop: 10}}>
+                <Text style={{textAlign: 'center', color: '#999', fontWeight: 'bold'}}>Schließen</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.overlay, styles.shadow]}>
+              <Text style={styles.overlayLabel}>GRÖSSE WÄHLEN</Text>
+            <View style={styles.sizeRow}>
+                {[
+                  { id: 'S', label: '💩', visualSize: 22 },
+                  { id: 'M', label: '💩', visualSize: 34 },
+                  { id: 'L', label: '💩', visualSize: 46 }
+                ].map(item => (
+                  <View key={item.id} style={{alignItems: 'center'}}>
+                    <TouchableOpacity 
+                      onPress={() => setSelectedSize(item.id)} 
+                      style={[
+                        styles.sizeBtn,
+                        { backgroundColor: selectedSize === item.id ? '#8B4513' : '#f0f0f0' }
+                      ]}
+                    >
+                      <Text style={{
+                        color: 'white', 
+                        fontWeight: 'bold', 
+                        fontSize: item.visualSize,
+                        includeFontPadding: false,
+                        textAlign: 'center'
+                      }}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={{marginTop: 8, fontWeight: 'bold', color: '#333', fontSize: 14}}>{item.id}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.mainReportBtn} onPress={reportPoop}>
+                <Text style={styles.mainReportBtnText}>💩 HAUFEN MELDEN</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+
+      {activeTab === 'Score' && (
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreTitle}>🏆 City Ranking</Text>
+          <Text style={styles.scoreSubTitle}>Top 20 Städte</Text>
+          <FlatList 
+            data={cityStats} 
+            keyExtractor={(item) => item.name} 
+            renderItem={({item, index}) => (
+              <TouchableOpacity 
+                style={[styles.scoreItem, styles.shadow]} 
+                onPress={() => jumpToCity(item.name)}
+              >
+                <Text style={styles.scoreRank}>#{index+1}</Text>
+                <Text style={{flex: 1, fontSize: 16, fontWeight: '600'}}>{item.name}</Text>
+                <Text style={{fontWeight: 'bold', fontSize: 16, color: '#8B4513'}}>{item.count} 💩</Text>
+              </TouchableOpacity>
+          )} />
+        </View>
+      )}
+
+      {activeTab === 'Profil' && (
+        <ScrollView style={styles.profileScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.profileHeaderCenter}>
+            <View style={[styles.avatarLarge, styles.shadow]}>
+              <Text style={styles.avatarTextLarge}>{displayName.charAt(0).toUpperCase()}</Text>
+            </View>
+            
+            {isEditingName ? (
+              <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 15}}>
+                <TextInput style={styles.nameEditInput} value={editNameInput} onChangeText={setEditNameInput} autoFocus placeholder="Dein Name" />
+                <TouchableOpacity onPress={saveName} style={styles.nameSaveBtn}><Text style={{color: 'white', fontWeight: 'bold'}}>OK</Text></TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 15}}>
+                <Text style={styles.profileNameMain}>{displayName}</Text>
+                {session && (
+                  <TouchableOpacity onPress={() => { setEditNameInput(displayName); setIsEditingName(true); }} style={{marginLeft: 10}}>
+                    <Text style={{fontSize: 20}}>✏️</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            <Text style={styles.profileEmailSub}>{session?.user?.email || "Melde dich an für mehr XP"}</Text>
+          </View>
+
+          <View style={[styles.rankingCard, styles.shadow]}>
+            <Text style={styles.rankLabel}>🏆 DEUTSCHLANDWEIT</Text>
+            <Text style={styles.rankNumber}>
+              #{stats.rank} <Text style={{fontSize: 20, fontWeight: 'normal'}}>von {stats.userCount}</Text>
+            </Text>
+          </View>
+
+          <View style={[styles.levelCard, styles.shadow]}>
+             <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <Text style={{fontSize: 35, marginRight: 15}}>👶</Text>
+                <View>
+                  <Text style={{fontSize: 11, color: '#999', fontWeight: 'bold'}}>LEVEL {stats.level}</Text>
+                  <Text style={{fontSize: 18, fontWeight: 'bold', color: '#333'}}>{stats.levelName}</Text>
+                </View>
+             </View>
+             <View style={styles.progressBar}>
+                <View style={[styles.progressFill, {width: `${stats.points % 100}%`}]} />
+             </View>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View style={[styles.statBox, styles.shadow]}>
+              <Text style={{fontSize: 20}}>⭐</Text>
+              <Text style={styles.statValue}>{stats.points}</Text>
+              <Text style={styles.statLabel}>PUNKTE</Text>
+            </View>
+            <View style={[styles.statBox, styles.shadow]}>
+              <Text style={{fontSize: 20}}>💩</Text>
+              <Text style={styles.statValue}>{stats.total}</Text>
+              <Text style={styles.statLabel}>MELDUNGEN</Text>
+            </View>
+            <View style={[styles.statBox, styles.shadow]}>
+              <Text style={{fontSize: 20}}>🧹</Text>
+              <Text style={styles.statValue}>{stats.clean}</Text>
+              <Text style={styles.statLabel}>CLEAN</Text>
+            </View>
+          </View>
+
+          <View style={[styles.notificationSection, styles.shadow]}>
+            <Text style={styles.notificationSectionTitle}>Benachrichtigungen</Text>
+            <Text style={styles.notificationStatusText}>
+              {notificationStatus === 'granted'
+                ? 'Benachrichtigungen sind aktiviert.'
+                : notificationStatus === 'denied'
+                ? 'Benachrichtigungen sind deaktiviert.'
+                : 'Benachrichtigungsstatus unklar.'}
+            </Text>
+            {notificationStatus !== 'granted' && (
+              <TouchableOpacity onPress={openNotificationSettings} style={styles.openSettingsBtn}>
+                <Text style={styles.openSettingsBtnText}>Einstellungen öffnen</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={[styles.notificationSection, styles.shadow]}>
+            <Text style={styles.notificationSectionTitle}>Feedback beim Melden</Text>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>Vibration</Text>
+                <Text style={styles.settingHint}>Kurzes Vibrationssignal beim Haufen melden.</Text>
+              </View>
+              <Switch
+                value={reportVibrationEnabled}
+                onValueChange={(value) => saveReportFeedbackSetting(REPORT_VIBRATION_STORAGE_KEY, value, setReportVibrationEnabled)}
+                trackColor={{ false: '#D8D8D8', true: '#CBA27A' }}
+                thumbColor={reportVibrationEnabled ? '#8B4513' : '#F4F4F4'}
+              />
+            </View>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>Signalton</Text>
+                <Text style={styles.settingHint}>Kurzer Ton beim erfolgreichen Tippen auf Melden.</Text>
+              </View>
+              <Switch
+                value={reportSoundEnabled}
+                onValueChange={(value) => saveReportFeedbackSetting(REPORT_SOUND_STORAGE_KEY, value, setReportSoundEnabled)}
+                trackColor={{ false: '#D8D8D8', true: '#CBA27A' }}
+                thumbColor={reportSoundEnabled ? '#8B4513' : '#F4F4F4'}
+              />
+            </View>
+          </View>
+
+          <View style={[styles.badgeSection, styles.shadow]}>
+            <Text style={styles.badgeSectionTitle}>BADGES & MEILENSTEINE</Text>
+            <View style={styles.badgeGrid}>
+              {badgeDefinitions.map(badge => (
+                <View key={badge.id} style={[styles.badgeCard, badge.achieved && styles.badgeCardActive, !badge.achieved && styles.badgeCardInactive]}>
+                  <View style={[styles.badgeIconWrap, badge.achieved ? styles.badgeIconWrapActive : styles.badgeIconWrapInactive]}>
+                    <Text style={[styles.badgeIcon, badge.achieved ? styles.badgeIconActive : styles.badgeIconInactive]}>{badge.icon}</Text>
+                  </View>
+                  <Text style={[styles.badgeTitle, badge.achieved ? styles.badgeTitleActive : styles.badgeTitleInactive]}>{badge.title}</Text>
+                  <Text style={[styles.badgeSubtitle, badge.achieved ? styles.badgeSubtitleActive : styles.badgeSubtitleInactive]}>{badge.subtitle}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            <TouchableOpacity onPress={() => openLegal('Datenschutz & Impressum', datenschutzText)} style={{marginBottom: 10}}>
+              <Text style={styles.footerLink}>Datenschutz & Impressum</Text>
+            </TouchableOpacity>
+            {session && (
+              <TouchableOpacity onPress={deleteAccount} style={[styles.authMainTrigger, {backgroundColor: '#d9534f', marginBottom: 10}]}>
+                <Text style={styles.authMainTriggerText}>ACCOUNT LÖSCHEN</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              onPress={() => session ? supabase.auth.signOut() : setShowAuth(true)} 
+              style={[styles.authMainTrigger, {backgroundColor: session ? '#555' : '#8B4513'}]}
+            >
+              <Text style={styles.authMainTriggerText}>{session ? 'AUSLOGGEN' : 'LOGIN / REGISTRIEREN'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{height: 100}} />
+        </ScrollView>
+      )}
+
+      <View style={styles.navbar}>
+        {['Radar', 'Score', 'Profil'].map(t => (
+          <TouchableOpacity key={t} onPress={() => setActiveTab(t)} style={styles.navItem}>
+            <Text style={{fontSize: 22, opacity: activeTab === t ? 1 : 0.4}}>{t === 'Radar' ? '🗺️' : (t === 'Score' ? '🏆' : '👀')}</Text>
+            <Text style={[styles.navText, {color: activeTab === t ? '#8B4513' : '#999'}]}>{t}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Modal visible={showAuth} animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.authFullContainer}>
+          <View style={styles.authForm}>
+            <Text style={styles.authHeroTitle}>Haufen-Jäger</Text>
+            <TextInput style={styles.inputField} placeholder="E-Mail" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <TextInput style={styles.inputField} placeholder="Passwort" value={password} onChangeText={setPassword} secureTextEntry />
+            <TouchableOpacity style={styles.loginBtn} onPress={() => handleAuth('login')}>
+              <Text style={styles.loginBtnText}>EINLOGGEN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.signupBtn} onPress={() => handleAuth('signup')}>
+              <Text style={styles.signupBtnText}>Konto erstellen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowAuth(false)} style={styles.cancelAuth}>
+              <Text style={{color: '#999', fontWeight: 'bold'}}>Abbrechen</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={legalVisible} transparent animationType="fade">
+        <View style={{flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end'}}>
+          <View style={{backgroundColor:'white', padding:20, borderRadius:20, maxHeight:'90%', margin:15}}>
+            <Text style={{fontSize:20, fontWeight:'bold', marginBottom:15}}>{legalContent.title}</Text>
+            <ScrollView style={{marginVertical:15, maxHeight:500}}>
+              <Text style={{fontSize:14, lineHeight:22, color:'#333'}}>{legalContent.text}</Text>
+            </ScrollView>
+            <TouchableOpacity onPress={() => setLegalVisible(false)} style={{backgroundColor:'#8B4513', padding:12, borderRadius:12, marginTop:15}}>
+              <Text style={{color:'white', fontWeight:'bold', textAlign:'center', fontSize:16}}>Schließen</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  shadow: { elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 15, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'white' },
+  xpTitle: { fontSize: 10, color: '#999', fontWeight: 'bold' },
+  xpValue: { fontSize: 18, fontWeight: 'bold', color: '#8B4513' },
+  headerProfileBtn: { backgroundColor: '#FDF5E6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#DEB887' },
+  headerProfileBtnText: { color: '#8B4513', fontWeight: 'bold', fontSize: 12 },
+  adContainer: { backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingVertical: 6, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#EEE' },
+  map: { flex: 1 },
+  overlay: { position: 'absolute', bottom: 18, left: 20, right: 20, backgroundColor: 'white', borderRadius: 24, padding: 18 },
+  overlayLabel: { textAlign: 'center', color: '#999', marginBottom: 12, fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+  sizeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 18 },
+  sizeBtn: { width: 58, height: 58, backgroundColor: '#f0f0f0', borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginHorizontal: 10 },
+  sizeBtnActive: { backgroundColor: '#8B4513' },
+  mainReportBtn: { height: 54, backgroundColor: '#FF4136', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  mainReportBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  navbar: { flexDirection: 'row', height: 95, backgroundColor: 'white', borderTopWidth: 1, borderColor: '#EEE', paddingBottom: 30, paddingTop: 10 },
+  navItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  navText: { fontSize: 11, fontWeight: 'bold', marginTop: 4 },
+  profileScroll: { flex: 1, padding: 20 },
+  profileHeaderCenter: { alignItems: 'center', marginBottom: 30 },
+  avatarLarge: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#FF6347', justifyContent: 'center', alignItems: 'center' },
+  avatarTextLarge: { color: 'white', fontSize: 40, fontWeight: 'bold' },
+  profileNameMain: { fontSize: 24, fontWeight: 'bold' },
+  profileEmailSub: { color: '#999', marginTop: 5 },
+  nameEditInput: { backgroundColor: '#EEE', borderRadius: 8, paddingHorizontal: 15, height: 40, width: 160, fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  nameSaveBtn: { backgroundColor: '#4CAF50', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 8, marginLeft: 10 },
+  rankingCard: { backgroundColor: '#FF7F50', borderRadius: 25, padding: 22, marginBottom: 20 },
+  rankLabel: { color: 'white', fontSize: 11, fontWeight: 'bold' },
+  rankNumber: { color: 'white', fontSize: 48, fontWeight: 'bold' },
+  levelCard: { backgroundColor: 'white', borderRadius: 20, padding: 20, marginBottom: 25 },
+  progressBar: { height: 10, backgroundColor: '#F0F0F0', borderRadius: 5, marginTop: 15, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#FF7F50' },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+  statBox: { backgroundColor: 'white', width: '31%', paddingVertical: 15, borderRadius: 18, alignItems: 'center' },
+  statValue: { fontSize: 18, fontWeight: 'bold', marginTop: 5 },
+  statLabel: { fontSize: 8, color: '#999', fontWeight: 'bold' },
+  notificationSection: { backgroundColor: 'white', borderRadius: 22, padding: 18, marginBottom: 25, borderWidth: 1, borderColor: '#E8E8EA' },
+  notificationSectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8 },
+  notificationStatusText: { fontSize: 14, color: '#555', lineHeight: 20, marginBottom: 10 },
+  openSettingsBtn: { backgroundColor: '#8B4513', paddingVertical: 12, borderRadius: 15, alignItems: 'center', marginTop: 5 },
+  openSettingsBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  settingCopy: { flex: 1, paddingRight: 14 },
+  settingTitle: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 4 },
+  settingHint: { fontSize: 12, color: '#666', lineHeight: 18 },
+  footer: { marginTop: 20, alignItems: 'center' },
+  footerLink: { color: '#999', fontSize: 14 },
+  authMainTrigger: { width: '100%', height: 60, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  authMainTriggerText: { color: 'white', fontWeight: 'bold' },
+  scoreContainer: { flex: 1, padding: 20, paddingTop: 40 },
+  scoreTitle: { fontSize: 30, fontWeight: 'bold', color: '#8B4513' },
+  scoreSubTitle: { color: '#999', marginBottom: 20 },
+  scoreItem: { flexDirection: 'row', padding: 20, backgroundColor: 'white', borderRadius: 18, marginBottom: 12, alignItems: 'center' },
+  scoreRank: { fontSize: 20, fontWeight: 'bold', color: '#FF7F50', width: 45 },
+  infoCard: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: 'white', padding: 25, borderRadius: 25 },
+  infoTitle: { fontWeight: 'bold', fontSize: 20, marginBottom: 5 },
+  deleteBtn: { backgroundColor: '#4CAF50', padding: 18, borderRadius: 15, marginTop: 10, alignItems: 'center' },
+  splash: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF5E6' },
+  authFullContainer: { flex: 1, backgroundColor: 'white' },
+  authForm: { flex: 1, padding: 30, justifyContent: 'center' },
+  authHeroTitle: { fontSize: 36, fontWeight: 'bold', color: '#333', marginBottom: 10 },
+  inputField: { height: 65, backgroundColor: '#F7F7F7', borderRadius: 15, paddingHorizontal: 20, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: '#EEE' },
+  badgeSection: { backgroundColor: 'white', borderRadius: 25, padding: 20, marginBottom: 25, borderWidth: 1, borderColor: '#E8E8EA' },
+  badgeSectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 14, color: '#333', letterSpacing: 0.5, textTransform: 'uppercase' },
+  badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  badgeCard: { width: '47%', backgroundColor: 'white', borderRadius: 20, paddingVertical: 16, paddingHorizontal: 14, marginBottom: 14, alignItems: 'center', minHeight: 144, justifyContent: 'flex-start', borderWidth: 1, borderColor: '#EEE' },
+  badgeCardActive: { backgroundColor: 'white', borderColor: '#E7C68A' },
+  badgeCardInactive: { opacity: 0.8, borderColor: '#EEE', backgroundColor: '#FFFFFF' },
+  badgeIconWrap: { width: 46, height: 46, borderRadius: 24, backgroundColor: '#F4F4F6', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  badgeIconWrapActive: { backgroundColor: '#FFF4DF' },
+  badgeIconWrapInactive: { backgroundColor: '#F4F4F6' },
+  badgeIcon: { fontSize: 24 },
+  badgeIconActive: { opacity: 1 },
+  badgeIconInactive: { opacity: 0.45 },
+  badgeTitle: { fontSize: 13, fontWeight: '700', marginBottom: 4, color: '#333', textAlign: 'center' },
+  badgeTitleActive: { color: '#2C2C2C' },
+  badgeTitleInactive: { color: '#7A7A7A' },
+  badgeSubtitle: { fontSize: 10, color: '#777', lineHeight: 14, textAlign: 'center' },
+  badgeSubtitleActive: { color: '#5F5F5F' },
+  badgeSubtitleInactive: { color: '#A0A0A0' },
+  loginBtn: { height: 65, backgroundColor: '#8B4513', borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  loginBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  signupBtn: { height: 65, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  signupBtnText: { color: '#8B4513', fontSize: 16, fontWeight: 'bold' },
+  cancelAuth: { marginTop: 40, alignItems: 'center' }
+});
+
