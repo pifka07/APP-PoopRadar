@@ -684,7 +684,7 @@ export default function App() {
     if (isReportExpired(report)) return;
 
     const normalizedType = getNormalizedReportType(report.size);
-    if (normalizedType === 'BIN_BAGS') return;
+    if (normalizedType !== 'POOP') return;
 
     const lat = parseFloat(report.latitude);
     const lng = parseFloat(report.longitude);
@@ -697,9 +697,7 @@ export default function App() {
       lng
     );
 
-    const isNearbyPoop = normalizedType === 'POOP' && distance < 500;
-    const isPoisonAlert = normalizedType === 'POISON';
-    if (!isNearbyPoop && !isPoisonAlert) return;
+    if (distance >= 500) return;
 
     notifiedReportIds.current.add(report.id);
     const typeMeta = getReportTypeMeta(report.size);
@@ -708,10 +706,8 @@ export default function App() {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: isPoisonAlert ? 'Giftköder Warnung!' : 'Haufen in der Nähe!',
-          body: isPoisonAlert
-            ? `${typeMeta.icon} Giftköder gemeldet in ${report.city}${distance < 500 ? ` (${distanceText} entfernt)` : ''}`
-            : `${typeMeta.icon} ${distanceText} entfernt in ${report.city}`,
+          title: 'Haufen in der Nähe!',
+          body: `${typeMeta.icon} ${distanceText} entfernt in ${report.city}`,
           sound: 'default',
           ...(Platform.OS === 'android' ? { channelId: 'poop-alerts' } : {}),
         },
@@ -750,17 +746,16 @@ export default function App() {
       const sorted = Object.keys(counts)
         .map(city => ({ name: city, count: counts[city] }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 20);
+        .slice(0, 30);
       setCityStats(sorted);
 
       const effectiveLocation = passedLocation || locationRef.current || location;
       if (!startupNearbyInfoShown.current && effectiveLocation) {
         const nearbyPoop = [];
-        const nearbyPoison = [];
 
         visibleReports.forEach((report) => {
           const normalizedType = getNormalizedReportType(report.size);
-          if (normalizedType === 'BIN_BAGS') return;
+          if (normalizedType !== 'POOP') return;
 
           const lat = parseFloat(report.latitude);
           const lng = parseFloat(report.longitude);
@@ -769,20 +764,13 @@ export default function App() {
           const distance = calculateDistance(effectiveLocation.latitude, effectiveLocation.longitude, lat, lng);
           if (distance > 500) return;
 
-          if (normalizedType === 'POISON') nearbyPoison.push(report);
-          if (normalizedType === 'POOP') nearbyPoop.push(report);
+          nearbyPoop.push(report);
         });
 
-        if (nearbyPoop.length > 0 || nearbyPoison.length > 0) {
+        if (nearbyPoop.length > 0) {
           startupNearbyInfoShown.current = true;
 
-          const parts = [];
-          if (nearbyPoop.length > 0) parts.push(`${nearbyPoop.length} Haufen`);
-          if (nearbyPoison.length > 0) parts.push(`${nearbyPoison.length} Giftköder`);
-
-          const alertBody = nearbyPoop.length > 0
-            ? `Pass auf deine Snicker auf. In 500m Naehe gefunden: ${parts.join(', ')}`
-            : `Achtung: ${parts.join(', ')}`;
+          const alertBody = `Pass auf deine Snicker auf. In 500m Naehe gefunden: ${nearbyPoop.length} Haufen`;
 
           Alert.alert('Achtung', alertBody);
 
@@ -1143,7 +1131,7 @@ export default function App() {
       {activeTab === 'Score' && (
         <View style={styles.scoreContainer}>
           <Text style={styles.scoreTitle}>🏆 City Ranking</Text>
-          <Text style={styles.scoreSubTitle}>Top 20 Städte</Text>
+          <Text style={styles.scoreSubTitle}>Top 30 Städte</Text>
           <FlatList 
             data={cityStats} 
             keyExtractor={(item) => item.name} 
