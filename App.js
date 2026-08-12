@@ -292,9 +292,15 @@ export default function App() {
   };
 
   const triggerReportVibrationFeedback = () => {
+    if (!reportVibrationEnabled) {
+      console.log('Vibration deaktiviert in den Einstellungen.');
+      return;
+    }
+
     try {
       Vibration.cancel();
-      Vibration.vibrate(180);
+      Vibration.vibrate([0, 120, 80, 120]);
+      console.log('Vibration ausgelöst: report feedback');
     } catch (vibError) {
       console.log('Vibration fehlgeschlagen:', vibError);
     }
@@ -303,7 +309,7 @@ export default function App() {
   const playReportFeedback = async () => {
     try {
       if (reportVibrationEnabled) {
-        await triggerReportVibrationFeedback();
+        triggerReportVibrationFeedback();
       }
     } catch (vibError) {
       console.log('Vibration-Fehler:', vibError);
@@ -927,6 +933,8 @@ export default function App() {
       return;
     }
 
+    // Direkt vor dem Upload auslösen, damit die Vibration auch auf langsamen Geräten zuverlässig ankommt.
+    triggerReportVibrationFeedback();
     await playReportFeedback();
     
     const tempMarker = {
@@ -991,7 +999,8 @@ export default function App() {
         
         setSelectedPoop(null);
         if (reportVibrationEnabled) {
-          Vibration.vibrate(100);
+          Vibration.cancel();
+          Vibration.vibrate([0, 100, 80, 100]);
         }
         await updateProfileData(session);
         Alert.alert("Sauber!", `Du hast ${rewardPoints} XP verdient! 🧹`);
