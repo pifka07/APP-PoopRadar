@@ -130,6 +130,17 @@ export default function App() {
   const [pushTokenStatus, setPushTokenStatus] = useState('unbekannt');
   const [reportVibrationEnabled, setReportVibrationEnabled] = useState(true);
   const [reportSoundEnabled, setReportSoundEnabled] = useState(true);
+  const [reportTypeExpanded, setReportTypeExpanded] = useState(true);
+  const [successMessage, setSuccessMessage] = useState('');
+  const successTimerRef = useRef(null);
+
+  const showSuccessToast = (message) => {
+    setSuccessMessage(message);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessMessage('');
+    }, 2000);
+  };
 
   const registerPushToken = async (sess, attempt = 1) => {
     if (!sess?.user?.id) return;
@@ -971,7 +982,9 @@ export default function App() {
       }
 
       const typeMeta = getReportTypeMeta(selectedSize);
-      Alert.alert("Erfolg", `${typeMeta.label} wurde gemeldet!${isPoopReport ? ` +${reportPoints} XP` : ''}`);
+      const message = `${typeMeta.label} wurde gemeldet!${isPoopReport ? ` +${reportPoints} XP` : ''}`;
+      showSuccessToast(message);
+      setSelectedSize('POOP');
     } else {
       setMarkers(prevMarkers => prevMarkers.filter(m => m.id !== tempMarker.id));
       console.log(reportError);
@@ -1014,7 +1027,20 @@ export default function App() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, styles.shadow]}>
-        <View><Text style={styles.xpTitle}>{session ? "PROFI" : "GAST"}</Text><Text style={styles.xpValue}>{stats.points} XP | {currentCity}</Text></View>
+        <View>
+          {activeTab === 'Radar' ? (
+            <>
+              <Text style={styles.xpTitle}>{session ? "PROFI" : "GAST"}</Text>
+              <Text style={styles.xpValue}>{stats.points} XP | {currentCity}</Text>
+            </>
+          ) : activeTab === 'Score' ? (
+            <Text style={styles.xpValue}>🏆 City Ranking</Text>
+          ) : activeTab === 'Top' ? (
+            <Text style={styles.xpValue}>🥇 Top 30 Melder</Text>
+          ) : (
+            <Text style={styles.xpValue}>👀 Profil</Text>
+          )}
+        </View>
       </View>
 
       {activeTab === 'Radar' && (
@@ -1103,35 +1129,43 @@ export default function App() {
             </View>
           ) : (
             <View style={[styles.overlay, styles.shadow]}>
-              <Text style={styles.overlayLabel}>MELDETYP WÄHLEN</Text>
-            <View style={styles.sizeRow}>
-                {REPORT_TYPE_OPTIONS.map(item => (
-                  <View key={item.id} style={{alignItems: 'center'}}>
-                    <TouchableOpacity 
-                      onPress={() => setSelectedSize(item.id)} 
-                      style={[
-                        styles.sizeBtn,
-                        { backgroundColor: selectedSize === item.id ? '#8B4513' : '#f0f0f0' }
-                      ]}
-                    >
-                      <Text style={{
-                        color: 'white', 
-                        fontWeight: 'bold', 
-                        fontSize: item.markerSize,
-                        includeFontPadding: false,
-                        textAlign: 'center'
-                      }}>
-                        {item.icon}
-                      </Text>
-                    </TouchableOpacity>
-                    <Text style={{marginTop: 8, fontWeight: 'bold', color: '#333', fontSize: 12}}>{item.shortLabel}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity style={styles.mainReportBtn} onPress={reportPoop}>
-                <Text style={styles.mainReportBtnText}>MELDUNG ABSENDEN</Text>
+              <TouchableOpacity style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}} onPress={() => setReportTypeExpanded(!reportTypeExpanded)}>
+                <Text style={styles.overlayLabel}>MELDETYP WÄHLEN</Text>
+                <Text style={{fontSize: 18}}>{reportTypeExpanded ? '▼' : '▶'}</Text>
               </TouchableOpacity>
+              
+              {reportTypeExpanded && (
+                <>
+                  <View style={styles.sizeRow}>
+                    {REPORT_TYPE_OPTIONS.map(item => (
+                      <View key={item.id} style={{alignItems: 'center'}}>
+                        <TouchableOpacity 
+                          onPress={() => setSelectedSize(item.id)} 
+                          style={[
+                            styles.sizeBtn,
+                            { backgroundColor: selectedSize === item.id ? '#8B4513' : '#f0f0f0' }
+                          ]}
+                        >
+                          <Text style={{
+                            color: 'white', 
+                            fontWeight: 'bold', 
+                            fontSize: item.markerSize,
+                            includeFontPadding: false,
+                            textAlign: 'center'
+                          }}>
+                            {item.icon}
+                          </Text>
+                        </TouchableOpacity>
+                        <Text style={{marginTop: 8, fontWeight: 'bold', color: '#333', fontSize: 12}}>{item.shortLabel}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity style={styles.mainReportBtn} onPress={reportPoop}>
+                    <Text style={styles.mainReportBtnText}>MELDUNG ABSENDEN</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           )}
         </View>
@@ -1139,10 +1173,10 @@ export default function App() {
 
       {activeTab === 'Score' && (
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreTitle}>🏆 City Ranking</Text>
+          <Text style={styles.scoreTitle}>Städte</Text>
           <Text style={styles.scoreSubTitle}>Top 30 Städte</Text>
           <FlatList 
-            data={cityStats} 
+            data={cityStats.slice(0, 30)} 
             keyExtractor={(item) => item.name} 
             renderItem={({item, index}) => (
               <TouchableOpacity 
@@ -1159,10 +1193,10 @@ export default function App() {
 
       {activeTab === 'Top' && (
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreTitle}>🥇 Top 20 Melder</Text>
+          <Text style={styles.scoreTitle}>Top 30 Melder</Text>
           <Text style={styles.scoreSubTitle}>Nur Profile mit freigegebenen Nicknames</Text>
           <FlatList
-            data={leaderboard}
+            data={leaderboard.slice(0, 30)}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={[styles.scoreItem, styles.shadow]}>
@@ -1234,11 +1268,6 @@ export default function App() {
               </TouchableOpacity>
             </View>
           )}
-
-          <View style={[styles.rankingCard, styles.shadow]}>
-            <Text style={styles.rankLabel}>🏆 DEUTSCHLANDWEIT</Text>
-            <Text style={styles.rankNumber}>#{stats.rank}</Text>
-          </View>
 
           <View style={[styles.levelCard, styles.shadow]}>
              <View style={{flexDirection: 'row', alignItems: 'center'}}>
@@ -1386,6 +1415,15 @@ export default function App() {
         </ScrollView>
       )}
 
+      {successMessage && (
+        <View style={styles.successToast}>
+          <TouchableOpacity onPress={() => setSuccessMessage('')} style={{position: 'absolute', top: 8, right: 8}}>
+            <Text style={{fontSize: 20, color: 'white'}}>✕</Text>
+          </TouchableOpacity>
+          <Text style={styles.successToastText}>{successMessage}</Text>
+        </View>
+      )}
+
       <View style={styles.navbar}>
         {['Radar', 'Score', 'Top', 'Profil'].map(t => (
           <TouchableOpacity key={t} onPress={() => setActiveTab(t)} style={styles.navItem}>
@@ -1434,7 +1472,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
   shadow: { elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 15, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'white' },
+  header: { paddingTop: 50, paddingHorizontal: 12, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'white' },
   xpTitle: { fontSize: 10, color: '#999', fontWeight: 'bold' },
   xpValue: { fontSize: 18, fontWeight: 'bold', color: '#8B4513' },
   headerProfileBtn: { backgroundColor: '#FDF5E6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#DEB887' },
@@ -1442,7 +1480,9 @@ const styles = StyleSheet.create({
   adContainer: { backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingVertical: 6, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#EEE' },
   map: { flex: 1 },
   overlay: { position: 'absolute', bottom: 18, left: 20, right: 20, backgroundColor: 'white', borderRadius: 24, padding: 18 },
-  overlayLabel: { textAlign: 'center', color: '#999', marginBottom: 12, fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+  overlayLabel: { color: '#999', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, flex: 1 },
+  successToast: { position: 'absolute', bottom: 200, left: 20, right: 20, backgroundColor: '#4CAF50', borderRadius: 12, padding: 16, alignItems: 'center' },
+  successToastText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
   sizeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 18 },
   sizeBtn: { width: 58, height: 58, backgroundColor: '#f0f0f0', borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginHorizontal: 10 },
   sizeBtnActive: { backgroundColor: '#8B4513' },
