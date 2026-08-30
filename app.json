@@ -1,6 +1,7 @@
 {
   "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-2590841526378095~3764279944"
+    "android_app_id": "ca-app-pub-2590841526378095~3764279944",
+    "ios_app_id": "ca-app-pub-2590841526378095~3764279944"
   },
   "expo": {
     "name": "Poop Radar",

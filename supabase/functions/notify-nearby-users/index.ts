@@ -9,9 +9,37 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const EXPO_PUSH_API = 'https://exp.host/--/api/v2/push/send';
 
 function getNormalizedType(rawType: string): string {
-  if (!rawType) return 'POOP';
-  if (rawType === 'S' || rawType === 'M' || rawType === 'L') return 'POOP';
-  if (rawType === 'POOP' || rawType === 'BIN_BAGS' || rawType === 'POISON') return rawType;
+  if (rawType === null || rawType === undefined || rawType === '') return 'POOP';
+
+  const normalizedText = String(rawType)
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+
+  if (normalizedText === 'S' || normalizedText === 'M' || normalizedText === 'L') return 'POOP';
+  if (normalizedText === 'POOP' || normalizedText === 'BINBAGS' || normalizedText === 'POISON') return normalizedText === 'BINBAGS' ? 'BIN_BAGS' : normalizedText;
+
+  const aliasMap: Record<string, string> = {
+    BINBAG: 'BIN_BAGS',
+    DOGBAG: 'BIN_BAGS',
+    DOGBAGS: 'BIN_BAGS',
+    TUETEN: 'BIN_BAGS',
+    TUTEN: 'BIN_BAGS',
+    MUELLEIMER: 'BIN_BAGS',
+    MULL: 'BIN_BAGS',
+    HUNDETUETEN: 'BIN_BAGS',
+    GIFT: 'POISON',
+    GIFTKOEDER: 'POISON',
+    GIFTKODER: 'POISON',
+    GIFTKOEDER: 'POISON',
+  };
+
+  if (aliasMap[normalizedText]) return aliasMap[normalizedText];
+  if (normalizedText.includes('GIFT') || normalizedText.includes('POISON')) return 'POISON';
+  if (normalizedText.includes('BAG') || normalizedText.includes('TUETE') || normalizedText.includes('TUTEN') || normalizedText.includes('MUELL') || normalizedText.includes('MULL')) return 'BIN_BAGS';
+
   return 'POOP';
 }
 

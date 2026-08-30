@@ -8,7 +8,6 @@ Stand: März 2026
 
 Verantwortlich für die Datenverarbeitung in dieser App ist:
 
-KORP
 T&W Zimmermann
 service@umdieecke.info
 
@@ -109,11 +108,13 @@ Datenübertragbarkeit
 
 Wir setzen technische und organisatorische Maßnahmen ein, um deine Daten vor Verlust, Missbrauch oder unbefugtem Zugriff zu schützen.
 
+Konto löschen: Du kannst dein Konto jederzeit über den untenstehenden Link löschen.
+
 11. Änderungen
 
 Diese Datenschutzerklärung kann bei Bedarf angepasst werden.
 
-11. Kontakt
+12. Kontakt
 
 Bei Fragen zum Datenschutz:
 
