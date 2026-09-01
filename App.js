@@ -60,6 +60,7 @@ const translations = {
     language: 'Sprache', loading: 'Radar lädt...', password: 'Passwort', passwordHint: 'Für neue Konten: mindestens 6 Zeichen',
     login: 'EINLOGGEN', createAccount: 'Konto erstellen', cancel: 'Abbrechen', deleteAccount: 'Konto löschen',
     reportPoop: 'Haufen', reportBags: 'Mülleimer / Hunde-Tüten', reportBagsShort: 'Tüten', reportPoison: 'Giftköder',
+    reportIllegalWaste: 'Illegaler Müll', reportIllegalWasteShort: 'Müll',
     saved: 'Gespeichert', reportSaved: 'wurde gemeldet!', saveFailed: 'Speichern fehlgeschlagen', entryNotSaved: 'Der Eintrag konnte nicht in der Datenbank gespeichert werden.',
     signInRequired: 'Bitte erst anmelden!', locationWaiting: 'Dein Standort wird noch ermittelt.', cleanTitle: 'Sauber!', earnedXp: 'Du hast {points} XP verdient! 🧹',
     accountDeleted: 'Account gelöscht', accountDeletedMessage: 'Ihr Account und alle Daten wurden erfolgreich gelöscht.', settingsNotSaved: 'Profil-Einstellungen konnten nicht gespeichert werden.',
@@ -83,6 +84,7 @@ const translations = {
     language: 'Language', loading: 'Loading radar...', password: 'Password', passwordHint: 'For new accounts: at least 6 characters',
     login: 'LOG IN', createAccount: 'Create account', cancel: 'Cancel', deleteAccount: 'Delete account',
     reportPoop: 'Poop', reportBags: 'Bins / dog waste bags', reportBagsShort: 'Bags', reportPoison: 'Poison bait',
+    reportIllegalWaste: 'Illegal dump', reportIllegalWasteShort: 'Trash',
     saved: 'Saved', reportSaved: 'was reported!', saveFailed: 'Could not save', entryNotSaved: 'The entry could not be saved to the database.',
     signInRequired: 'Please sign in first!', locationWaiting: 'Your location is still being determined.', cleanTitle: 'Clean!', earnedXp: 'You earned {points} XP! 🧹',
     accountDeleted: 'Account deleted', accountDeletedMessage: 'Your account and all data were deleted successfully.', settingsNotSaved: 'Profile settings could not be saved.',
@@ -117,12 +119,22 @@ const REPORT_TYPE_OPTIONS = [
     markerBg: '#FFDDE6',
     markerBorder: '#B4234D',
   },
+  {
+    id: 'ILLEGAL_WASTE',
+    label: 'Illegaler Müll',
+    shortLabel: 'Müll',
+    icon: '🚫',
+    markerSize: 22,
+    markerBg: '#F3E8FF',
+    markerBorder: '#7E22CE',
+  },
 ];
 
 const REPORT_TYPE_EXPIRY_DAYS = {
   POOP: 8,
   BIN_BAGS: null,
   POISON: 10,
+  ILLEGAL_WASTE: null,
 };
 
 const getNormalizedReportType = (rawType) => {
@@ -136,7 +148,17 @@ const getNormalizedReportType = (rawType) => {
     .replace(/[^A-Z0-9]/g, '');
 
   if (normalizedText === 'S' || normalizedText === 'M' || normalizedText === 'L') return 'POOP';
-  if (normalizedText === 'POOP' || normalizedText === 'BINBAGS' || normalizedText === 'POISON') return normalizedText === 'BINBAGS' ? 'BIN_BAGS' : normalizedText;
+  if (
+    normalizedText === 'POOP' ||
+    normalizedText === 'BINBAGS' ||
+    normalizedText === 'POISON' ||
+    normalizedText === 'ILLEGAL_WASTE' ||
+    normalizedText === 'ILLEGALWASTE'
+  ) {
+    if (normalizedText === 'BINBAGS') return 'BIN_BAGS';
+    if (normalizedText === 'ILLEGALWASTE') return 'ILLEGAL_WASTE';
+    return normalizedText;
+  }
 
   const aliasMap = {
     BINBAG: 'BIN_BAGS',
@@ -145,18 +167,46 @@ const getNormalizedReportType = (rawType) => {
     TUETEN: 'BIN_BAGS',
     TUTEN: 'BIN_BAGS',
     MUELLEIMER: 'BIN_BAGS',
-    MULL: 'BIN_BAGS',
     MUEHLEIMER: 'BIN_BAGS',
     HUNDETUETEN: 'BIN_BAGS',
     GIFT: 'POISON',
     GIFTKOEDER: 'POISON',
     GIFTKODER: 'POISON',
     GIFTKÖDER: 'POISON',
+    MUELL: 'ILLEGAL_WASTE',
+    MULL: 'ILLEGAL_WASTE',
+    ILLEGAL: 'ILLEGAL_WASTE',
+    ILLEGALERMUELL: 'ILLEGAL_WASTE',
+    ILLEGALERMULL: 'ILLEGAL_WASTE',
+    WILDERMUELL: 'ILLEGAL_WASTE',
+    WILDERMULL: 'ILLEGAL_WASTE',
+    SPERRMUELL: 'ILLEGAL_WASTE',
+    SPERRMULL: 'ILLEGAL_WASTE',
+    TRASH: 'ILLEGAL_WASTE',
+    LITTER: 'ILLEGAL_WASTE',
+    DUMP: 'ILLEGAL_WASTE',
   };
 
   if (aliasMap[normalizedText]) return aliasMap[normalizedText];
   if (normalizedText.includes('GIFT') || normalizedText.includes('POISON')) return 'POISON';
-  if (normalizedText.includes('BAG') || normalizedText.includes('TUETE') || normalizedText.includes('TUTEN') || normalizedText.includes('MUELL') || normalizedText.includes('MULL')) return 'BIN_BAGS';
+  if (
+    normalizedText.includes('ILLEGAL') ||
+    normalizedText.includes('SPERR') ||
+    normalizedText.includes('WILD') ||
+    normalizedText.includes('TRASH') ||
+    normalizedText.includes('LITTER') ||
+    normalizedText.includes('DUMP')
+  ) {
+    return 'ILLEGAL_WASTE';
+  }
+  if (
+    normalizedText.includes('BAG') ||
+    normalizedText.includes('TUETE') ||
+    normalizedText.includes('TUTEN') ||
+    normalizedText.includes('EIMER')
+  ) {
+    return 'BIN_BAGS';
+  }
 
   return 'POOP';
 };
@@ -230,6 +280,7 @@ export default function App() {
     const normalizedType = getNormalizedReportType(type);
     if (normalizedType === 'BIN_BAGS') return { label: t.reportBags, shortLabel: t.reportBagsShort };
     if (normalizedType === 'POISON') return { label: t.reportPoison, shortLabel: t.reportPoison };
+    if (normalizedType === 'ILLEGAL_WASTE') return { label: t.reportIllegalWaste, shortLabel: t.reportIllegalWasteShort };
     return { label: t.reportPoop, shortLabel: t.reportPoop };
   };
 
@@ -910,7 +961,7 @@ export default function App() {
     if (isReportExpired(report)) return;
 
     const normalizedType = getNormalizedReportType(report.size);
-    if (normalizedType !== 'POOP' && normalizedType !== 'POISON') return;
+    if (normalizedType !== 'POOP' && normalizedType !== 'POISON' && normalizedType !== 'ILLEGAL_WASTE') return;
 
     const lat = parseFloat(report.latitude);
     const lng = parseFloat(report.longitude);
@@ -928,9 +979,15 @@ export default function App() {
     notifiedReportIds.current.add(report.id);
     const typeMeta = getReportTypeMeta(report.size);
     const distanceText = distance < 100 ? 'ganz nah' : `${Math.round(distance / 10) * 10}m`;
-    const alertTitle = normalizedType === 'POISON' ? '⚠️ Giftköder Warnung!' : 'Haufen in der Nähe!';
+    const alertTitle = normalizedType === 'POISON'
+      ? '⚠️ Giftköder Warnung!'
+      : normalizedType === 'ILLEGAL_WASTE'
+      ? '🚫 Illegaler Müll gemeldet!'
+      : 'Haufen in der Nähe!';
     const alertBody = normalizedType === 'POISON'
       ? `${typeMeta.icon} Giftköder ${distanceText} entfernt in ${report.city || 'deiner Nähe'}`
+      : normalizedType === 'ILLEGAL_WASTE'
+      ? `${typeMeta.icon} Illegaler Müll ${distanceText} entfernt in ${report.city || 'deiner Nähe'}`
       : `${typeMeta.icon} ${distanceText} entfernt in ${report.city || 'deiner Nähe'}`;
 
     try {
@@ -1190,6 +1247,7 @@ export default function App() {
         POOP: 10,
         BIN_BAGS: 5,
         POISON: 15,
+        ILLEGAL_WASTE: 20,
       };
       const reportPoints = pointsByType[normalizedType] || 0;
 
@@ -1494,27 +1552,40 @@ export default function App() {
             <Text style={styles.profileEmailSub}>{session?.user?.email || t.signInForXp}</Text>
           </View>
 
-          <View style={styles.languageSection}>
-            <Text style={styles.notificationSectionTitle}>{t.language}</Text>
-            <View style={styles.languageControls}>
-              <TouchableOpacity
-                accessibilityLabel="Deutsch"
-                accessibilityState={{ selected: language === 'de' }}
-                onPress={() => changeLanguage('de')}
-                style={[styles.languageButton, language === 'de' && styles.languageButtonActive]}
-              >
-                <Text style={styles.languageFlag}>🇩🇪</Text>
-                <Text style={styles.languageCode}>DE</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityLabel="English"
-                accessibilityState={{ selected: language === 'en' }}
-                onPress={() => changeLanguage('en')}
-                style={[styles.languageButton, language === 'en' && styles.languageButtonActive]}
-              >
-                <Text style={styles.languageFlag}>🇬🇧</Text>
-                <Text style={styles.languageCode}>EN</Text>
-              </TouchableOpacity>
+          <View style={[styles.notificationSection, styles.shadow, { marginBottom: 20 }]}>
+            <View style={styles.languageRow}>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>{t.language}</Text>
+                <Text style={styles.settingHint}>{language === 'de' ? 'Deutsch' : 'English'}</Text>
+              </View>
+
+              <View style={styles.languageSwitchContainer}>
+                <TouchableOpacity
+                  onPress={() => changeLanguage('de')}
+                  style={[styles.languageSideOption, language === 'de' && styles.languageSideOptionActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.languageSideFlag}>🇩🇪</Text>
+                  <Text style={[styles.languageSideText, language === 'de' && styles.languageSideTextActive]}>DE</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => changeLanguage(language === 'de' ? 'en' : 'de')}
+                  activeOpacity={0.8}
+                  style={styles.languageToggleTrack}
+                >
+                  <View style={[styles.languageToggleThumb, language === 'en' && styles.languageToggleThumbRight]} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => changeLanguage('en')}
+                  style={[styles.languageSideOption, language === 'en' && styles.languageSideOptionActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.languageSideFlag}>🇬🇧</Text>
+                  <Text style={[styles.languageSideText, language === 'en' && styles.languageSideTextActive]}>EN</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -1582,6 +1653,7 @@ export default function App() {
             <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>💩 {t.reportPoop}: +10 XP</Text>
             <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>🛍️ {t.reportBagsShort}: +5 XP</Text>
             <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>⚠️ {t.reportPoison}: +15 XP</Text>
+            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>🚫 {t.reportIllegalWasteShort}: +20 XP</Text>
             <Text style={[styles.notificationStatusText, { marginBottom: 0 }]}>🧹 {language === 'de' ? 'Aufräumen' : 'Clean up'}: +25 XP</Text>
           </View>
 
@@ -1770,7 +1842,7 @@ const styles = StyleSheet.create({
   successToast: { position: 'absolute', bottom: 200, left: 20, right: 20, backgroundColor: '#4CAF50', borderRadius: 12, padding: 16, alignItems: 'center' },
   successToastText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
   sizeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 18 },
-  sizeBtn: { width: 58, height: 58, backgroundColor: '#f0f0f0', borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginHorizontal: 10 },
+  sizeBtn: { width: 54, height: 54, backgroundColor: '#f0f0f0', borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 6 },
   sizeBtnActive: { backgroundColor: '#8B4513' },
   mainReportBtn: { height: 54, backgroundColor: '#FF4136', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   mainReportBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
@@ -1803,6 +1875,16 @@ const styles = StyleSheet.create({
   notificationStatusText: { fontSize: 14, color: '#555', lineHeight: 20, marginBottom: 10 },
   openSettingsBtn: { backgroundColor: '#8B4513', paddingVertical: 12, borderRadius: 15, alignItems: 'center', marginTop: 5 },
   openSettingsBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  languageRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  languageSwitchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F7', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 24, borderWidth: 1, borderColor: '#E5E5EA' },
+  languageSideOption: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14 },
+  languageSideOptionActive: { backgroundColor: 'transparent' },
+  languageSideFlag: { fontSize: 18, marginRight: 4 },
+  languageSideText: { fontSize: 12, fontWeight: '700', color: '#8E8E93' },
+  languageSideTextActive: { color: '#8B4513' },
+  languageToggleTrack: { width: 44, height: 26, backgroundColor: '#E5E5EA', borderRadius: 13, padding: 2, marginHorizontal: 4, justifyContent: 'center' },
+  languageToggleThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#8B4513', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1.5 },
+  languageToggleThumbRight: { alignSelf: 'flex-end', backgroundColor: '#8B4513' },
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
   settingCopy: { flex: 1, paddingRight: 14 },
   settingTitle: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 4 },

@@ -19,7 +19,17 @@ function getNormalizedType(rawType: string): string {
     .replace(/[^A-Z0-9]/g, '');
 
   if (normalizedText === 'S' || normalizedText === 'M' || normalizedText === 'L') return 'POOP';
-  if (normalizedText === 'POOP' || normalizedText === 'BINBAGS' || normalizedText === 'POISON') return normalizedText === 'BINBAGS' ? 'BIN_BAGS' : normalizedText;
+  if (
+    normalizedText === 'POOP' ||
+    normalizedText === 'BINBAGS' ||
+    normalizedText === 'POISON' ||
+    normalizedText === 'ILLEGAL_WASTE' ||
+    normalizedText === 'ILLEGALWASTE'
+  ) {
+    if (normalizedText === 'BINBAGS') return 'BIN_BAGS';
+    if (normalizedText === 'ILLEGALWASTE') return 'ILLEGAL_WASTE';
+    return normalizedText;
+  }
 
   const aliasMap: Record<string, string> = {
     BINBAG: 'BIN_BAGS',
@@ -28,17 +38,46 @@ function getNormalizedType(rawType: string): string {
     TUETEN: 'BIN_BAGS',
     TUTEN: 'BIN_BAGS',
     MUELLEIMER: 'BIN_BAGS',
-    MULL: 'BIN_BAGS',
+    MUEHLEIMER: 'BIN_BAGS',
     HUNDETUETEN: 'BIN_BAGS',
     GIFT: 'POISON',
     GIFTKOEDER: 'POISON',
     GIFTKODER: 'POISON',
-    GIFTKOEDER: 'POISON',
+    GIFTKÖDER: 'POISON',
+    MUELL: 'ILLEGAL_WASTE',
+    MULL: 'ILLEGAL_WASTE',
+    ILLEGAL: 'ILLEGAL_WASTE',
+    ILLEGALERMUELL: 'ILLEGAL_WASTE',
+    ILLEGALERMULL: 'ILLEGAL_WASTE',
+    WILDERMUELL: 'ILLEGAL_WASTE',
+    WILDERMULL: 'ILLEGAL_WASTE',
+    SPERRMUELL: 'ILLEGAL_WASTE',
+    SPERRMULL: 'ILLEGAL_WASTE',
+    TRASH: 'ILLEGAL_WASTE',
+    LITTER: 'ILLEGAL_WASTE',
+    DUMP: 'ILLEGAL_WASTE',
   };
 
   if (aliasMap[normalizedText]) return aliasMap[normalizedText];
   if (normalizedText.includes('GIFT') || normalizedText.includes('POISON')) return 'POISON';
-  if (normalizedText.includes('BAG') || normalizedText.includes('TUETE') || normalizedText.includes('TUTEN') || normalizedText.includes('MUELL') || normalizedText.includes('MULL')) return 'BIN_BAGS';
+  if (
+    normalizedText.includes('ILLEGAL') ||
+    normalizedText.includes('SPERR') ||
+    normalizedText.includes('WILD') ||
+    normalizedText.includes('TRASH') ||
+    normalizedText.includes('LITTER') ||
+    normalizedText.includes('DUMP')
+  ) {
+    return 'ILLEGAL_WASTE';
+  }
+  if (
+    normalizedText.includes('BAG') ||
+    normalizedText.includes('TUETE') ||
+    normalizedText.includes('TUTEN') ||
+    normalizedText.includes('EIMER')
+  ) {
+    return 'BIN_BAGS';
+  }
 
   return 'POOP';
 }
@@ -100,6 +139,7 @@ serve(async (req: Request) => {
     const reportLat = parseFloat(report.latitude);
     const reportLng = parseFloat(report.longitude);
     const isPoisonAlert = normalizedType === 'POISON';
+    const isWasteAlert = normalizedType === 'ILLEGAL_WASTE';
 
     const messages: object[] = [];
 
@@ -114,20 +154,30 @@ serve(async (req: Request) => {
         reportLng,
       );
 
-      // Haufen: nur innerhalb 500m. Giftköder: immer (Sicherheit)
+      // Haufen: nur innerhalb 500m. Giftköder & illegaler Müll: immer (Sicherheit / Umwelt)
       if (normalizedType === 'POOP' && distance > 500) continue;
 
       const distanceText =
         distance < 100 ? 'ganz nah' : `${Math.round(distance / 10) * 10}m`;
 
+      const alertTitle = isPoisonAlert
+        ? '⚠️ Giftköder Warnung!'
+        : isWasteAlert
+        ? '🚫 Illegaler Müll gemeldet!'
+        : '💩 Haufen in der Nähe!';
+
+      const alertBody = isPoisonAlert
+        ? `⚠️ Giftköder gemeldet in ${report.city ?? 'deiner Nähe'} (${distanceText} entfernt)`
+        : isWasteAlert
+        ? `🚫 Illegaler Müll gemeldet in ${report.city ?? 'deiner Nähe'} (${distanceText} entfernt)`
+        : `💩 Haufen ${distanceText} entfernt in ${report.city ?? 'deiner Nähe'}`;
+
       messages.push({
         to: profile.expo_push_token,
         sound: 'default',
         channelId: 'poop-alerts',
-        title: isPoisonAlert ? '⚠️ Giftköder Warnung!' : '💩 Haufen in der Nähe!',
-        body: isPoisonAlert
-          ? `⚠️ Giftköder gemeldet in ${report.city ?? 'deiner Nähe'} (${distanceText} entfernt)`
-          : `💩 Haufen ${distanceText} entfernt in ${report.city ?? 'deiner Nähe'}`,
+        title: alertTitle,
+        body: alertBody,
         data: { reportId: report.id, type: normalizedType },
       });
     }
