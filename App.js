@@ -13,7 +13,7 @@ import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
-import { datenschutzText, impressumText } from './legalTexts';
+import { datenschutzText, datenschutzTextEn, impressumText } from './legalTexts';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -38,6 +38,56 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 const REPORT_VIBRATION_STORAGE_KEY = 'reportFeedback.vibrationEnabled';
 const REPORT_SOUND_STORAGE_KEY = 'reportFeedback.soundEnabled';
+const LANGUAGE_STORAGE_KEY = 'app.language';
+
+const translations = {
+  de: {
+    profile: 'Profil', radar: 'Radar', cities: 'Städte', reports: 'MELDUNGEN', points: 'PUNKTE', pro: 'PROFI', guest: 'GAST',
+    cityRanking: '🏆 City Ranking', topReporters: '🥇 Top 20 Melder', profileTitle: '👀 Profil',
+    reportType: 'MELDETYP WÄHLEN', submitReport: 'MELDUNG ABSENDEN', foundIn: 'Fund in', type: 'Typ:',
+    cleaned: "ICH HAB'S WEGGERÄUMT ✅", close: 'Schließen', top30Cities: 'Top 30 Städte',
+    top20Reporters: 'Top 20 Melder', leaderboardNote: 'Nur Profile mit freigegebenen Nicknames',
+    noReporters: 'Noch keine freigegebenen Melder in der Bestenliste.', name: 'Dein Name',
+    signInForXp: 'Melde dich an für mehr XP', currentRank: 'AKTUELL ERREICHTER RANG',
+    leaderboardProfile: 'Profil für Bestenliste', nickname: 'Dein Nickname', allowPublishing: 'Veröffentlichung erlauben',
+    publishingHint: 'Zeige deinen Nickname in der Top 20 Liste.', save: 'Speichern', pointSystem: 'Punktesystem',
+    notifications: 'Benachrichtigungen', notificationsOn: 'Benachrichtigungen sind aktiviert.',
+    notificationsOff: 'Benachrichtigungen sind deaktiviert.', notificationsUnknown: 'Benachrichtigungsstatus unklar.',
+    openSettings: 'Einstellungen öffnen', reportFeedback: 'Feedback beim Melden', vibration: 'Vibration',
+    vibrationHint: 'Kurzes Vibrationssignal beim Haufen melden.', sound: 'Signalton',
+    soundHint: 'Kurzer Ton beim erfolgreichen Tippen auf Melden.', badges: 'BADGES & MELDETYPEN',
+    privacy: 'Datenschutz & Impressum', logout: 'AUSLOGGEN', loginRegister: 'LOGIN / REGISTRIEREN',
+    language: 'Sprache', loading: 'Radar lädt...', password: 'Passwort', passwordHint: 'Für neue Konten: mindestens 6 Zeichen',
+    login: 'EINLOGGEN', createAccount: 'Konto erstellen', cancel: 'Abbrechen', deleteAccount: 'Konto löschen',
+    reportPoop: 'Haufen', reportBags: 'Mülleimer / Hunde-Tüten', reportBagsShort: 'Tüten', reportPoison: 'Giftköder',
+    saved: 'Gespeichert', reportSaved: 'wurde gemeldet!', saveFailed: 'Speichern fehlgeschlagen', entryNotSaved: 'Der Eintrag konnte nicht in der Datenbank gespeichert werden.',
+    signInRequired: 'Bitte erst anmelden!', locationWaiting: 'Dein Standort wird noch ermittelt.', cleanTitle: 'Sauber!', earnedXp: 'Du hast {points} XP verdient! 🧹',
+    accountDeleted: 'Account gelöscht', accountDeletedMessage: 'Ihr Account und alle Daten wurden erfolgreich gelöscht.', settingsNotSaved: 'Profil-Einstellungen konnten nicht gespeichert werden.',
+  },
+  en: {
+    profile: 'Profile', radar: 'Radar', cities: 'Cities', reports: 'REPORTS', points: 'POINTS', pro: 'PRO', guest: 'GUEST',
+    cityRanking: '🏆 City Ranking', topReporters: '🥇 Top 20 Reporters', profileTitle: '👀 Profile',
+    reportType: 'CHOOSE REPORT TYPE', submitReport: 'SUBMIT REPORT', foundIn: 'Found in', type: 'Type:',
+    cleaned: "I'VE CLEANED IT UP ✅", close: 'Close', top30Cities: 'Top 30 Cities',
+    top20Reporters: 'Top 20 Reporters', leaderboardNote: 'Only profiles with public nicknames',
+    noReporters: 'No public reporters on the leaderboard yet.', name: 'Your name',
+    signInForXp: 'Sign in to earn more XP', currentRank: 'CURRENT RANK',
+    leaderboardProfile: 'Leaderboard profile', nickname: 'Your nickname', allowPublishing: 'Allow publishing',
+    publishingHint: 'Show your nickname in the Top 20 list.', save: 'Save', pointSystem: 'Points system',
+    notifications: 'Notifications', notificationsOn: 'Notifications are enabled.',
+    notificationsOff: 'Notifications are disabled.', notificationsUnknown: 'Notification status is unknown.',
+    openSettings: 'Open settings', reportFeedback: 'Report feedback', vibration: 'Vibration',
+    vibrationHint: 'Brief vibration when reporting poop.', sound: 'Sound',
+    soundHint: 'Brief sound after successfully submitting a report.', badges: 'BADGES & REPORT TYPES',
+    privacy: 'Privacy Policy & Legal Notice', logout: 'LOG OUT', loginRegister: 'LOG IN / REGISTER',
+    language: 'Language', loading: 'Loading radar...', password: 'Password', passwordHint: 'For new accounts: at least 6 characters',
+    login: 'LOG IN', createAccount: 'Create account', cancel: 'Cancel', deleteAccount: 'Delete account',
+    reportPoop: 'Poop', reportBags: 'Bins / dog waste bags', reportBagsShort: 'Bags', reportPoison: 'Poison bait',
+    saved: 'Saved', reportSaved: 'was reported!', saveFailed: 'Could not save', entryNotSaved: 'The entry could not be saved to the database.',
+    signInRequired: 'Please sign in first!', locationWaiting: 'Your location is still being determined.', cleanTitle: 'Clean!', earnedXp: 'You earned {points} XP! 🧹',
+    accountDeleted: 'Account deleted', accountDeletedMessage: 'Your account and all data were deleted successfully.', settingsNotSaved: 'Profile settings could not be saved.',
+  },
+};
 
 const REPORT_TYPE_OPTIONS = [
   {
@@ -129,6 +179,7 @@ const isReportExpired = (report, nowMs = Date.now()) => {
 };
 
 export default function App() {
+  const [language, setLanguage] = useState('de');
   const [session, setSession] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -168,6 +219,19 @@ export default function App() {
   const [reportTypeExpanded, setReportTypeExpanded] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   const successTimerRef = useRef(null);
+  const t = translations[language];
+
+  const changeLanguage = async (nextLanguage) => {
+    setLanguage(nextLanguage);
+    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+  };
+
+  const getLocalizedReportType = (type) => {
+    const normalizedType = getNormalizedReportType(type);
+    if (normalizedType === 'BIN_BAGS') return { label: t.reportBags, shortLabel: t.reportBagsShort };
+    if (normalizedType === 'POISON') return { label: t.reportPoison, shortLabel: t.reportPoison };
+    return { label: t.reportPoop, shortLabel: t.reportPoop };
+  };
 
   const showSuccessToast = (message) => {
     setSuccessMessage(message);
@@ -402,8 +466,8 @@ export default function App() {
   const badgeDefinitions = [
     {
       id: 'spurenleser',
-      title: 'Spurenleser',
-      subtitle: 'Für den Einstieg ab 100 Punkten',
+      title: language === 'de' ? 'Spurenleser' : 'Tracker',
+      subtitle: language === 'de' ? 'Für den Einstieg ab 100 Punkten' : 'Starting at 100 points',
       icon: '🔎',
       achieved: stats.points >= 100,
       accent: '#5B7CFA',
@@ -412,8 +476,8 @@ export default function App() {
     },
     {
       id: 'pfadfinder',
-      title: 'Pfadfinder',
-      subtitle: 'Für 500 Punkte',
+      title: language === 'de' ? 'Pfadfinder' : 'Pathfinder',
+      subtitle: language === 'de' ? 'Für 500 Punkte' : 'For 500 points',
       icon: '🗺️',
       achieved: stats.points >= 500,
       accent: '#8C6A3F',
@@ -422,8 +486,8 @@ export default function App() {
     },
     {
       id: 'sauberkeits-wachter',
-      title: 'Sauberkeits-Wächter',
-      subtitle: 'Für 1.000 Punkte',
+      title: language === 'de' ? 'Sauberkeits-Wächter' : 'Cleanliness Guardian',
+      subtitle: language === 'de' ? 'Für 1.000 Punkte' : 'For 1,000 points',
       icon: '🛡️',
       achieved: stats.points >= 1000,
       accent: '#3FAE7A',
@@ -432,8 +496,8 @@ export default function App() {
     },
     {
       id: 'stadtheld',
-      title: 'Stadtheld',
-      subtitle: 'Für 5.000 Punkte',
+      title: language === 'de' ? 'Stadtheld' : 'City Hero',
+      subtitle: language === 'de' ? 'Für 5.000 Punkte' : 'For 5,000 points',
       icon: '🏛️',
       achieved: stats.points >= 5000,
       accent: '#D97706',
@@ -442,8 +506,8 @@ export default function App() {
     },
     {
       id: 'community-champion',
-      title: 'Community-Champion',
-      subtitle: 'Für 10.000 Punkte',
+      title: language === 'de' ? 'Community-Champion' : 'Community Champion',
+      subtitle: language === 'de' ? 'Für 10.000 Punkte' : 'For 10,000 points',
       icon: '🏆',
       achieved: stats.points >= 10000,
       accent: '#A855F7',
@@ -452,8 +516,8 @@ export default function App() {
     },
     {
       id: 'umwelt-ikone',
-      title: 'Umwelt-Ikone',
-      subtitle: 'Alternatives End-Badge',
+      title: language === 'de' ? 'Umwelt-Ikone' : 'Environmental Icon',
+      subtitle: language === 'de' ? 'Alternatives End-Badge' : 'Alternative final badge',
       icon: '🌿',
       achieved: stats.points >= 10000,
       accent: '#22A06B',
@@ -687,12 +751,16 @@ export default function App() {
   };
 
   const deleteAccount = async () => {
+    const deleteTitle = language === 'de' ? 'Account löschen' : 'Delete account';
+    const deletePrompt = language === 'de'
+      ? 'Sind Sie sicher, dass Sie Ihren Account und alle Daten löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.'
+      : 'Are you sure you want to delete your account and all data? This action cannot be undone.';
     Alert.alert(
-      "Account löschen",
-      "Sind Sie sicher, dass Sie Ihren Account und alle Daten löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      deleteTitle,
+      deletePrompt,
       [
-        { text: "Abbrechen", style: "cancel" },
-        { text: "Löschen", style: "destructive", onPress: async () => {
+        { text: t.cancel, style: "cancel" },
+        { text: language === 'de' ? 'Löschen' : 'Delete', style: "destructive", onPress: async () => {
           try {
             // Lösche alle Reports des Users
             await supabase.from('reports').delete().eq('user_id', session.user.id);
@@ -700,10 +768,10 @@ export default function App() {
             await supabase.from('profiles').delete().eq('id', session.user.id);
             // Logout
             await supabase.auth.signOut();
-            Alert.alert("Account gelöscht", "Ihr Account und alle Daten wurden erfolgreich gelöscht.");
+            Alert.alert(t.accountDeleted, t.accountDeletedMessage);
           } catch (error) {
             console.log("Fehler beim Löschen:", error);
-            Alert.alert("Fehler", "Beim Löschen ist ein Fehler aufgetreten.");
+            Alert.alert('Error', language === 'de' ? 'Beim Löschen ist ein Fehler aufgetreten.' : 'An error occurred while deleting the account.');
           }
         }}
       ]
@@ -1074,6 +1142,7 @@ export default function App() {
         longitudeDelta: 0.01,
       };
 
+      setMapRegion(region);
       setActiveTab('Radar');
       pendingRegionRef.current = region;
 
@@ -1151,14 +1220,14 @@ export default function App() {
 
       await updateProfileData(session);
 
-      const typeMeta = getReportTypeMeta(selectedSize);
-      const message = `${typeMeta.label} wurde gemeldet!${reportPoints > 0 ? ` +${reportPoints} XP` : ''}`;
+      const typeMeta = getLocalizedReportType(selectedSize);
+      const message = `${typeMeta.label} ${t.reportSaved}${reportPoints > 0 ? ` +${reportPoints} XP` : ''}`;
       showSuccessToast(message);
       setSelectedSize('POOP');
     } else {
       setMarkers(prevMarkers => prevMarkers.filter(m => m.id !== tempMarker.id));
       console.log('Report-Upload Fehler:', reportError);
-      Alert.alert('Speichern fehlgeschlagen', reportError.message || 'Der Eintrag konnte nicht in der Datenbank gespeichert werden.');
+      Alert.alert(t.saveFailed, reportError.message || t.entryNotSaved);
     }
   };
 
@@ -1199,13 +1268,13 @@ export default function App() {
           Vibration.vibrate([0, 100, 80, 100]);
         }
         await updateProfileData(session);
-        Alert.alert("Sauber!", `Du hast ${rewardPoints} XP verdient! 🧹`);
+        Alert.alert(t.cleanTitle, t.earnedXp.replace('{points}', rewardPoints));
     }
   };
 
   const openLegal = (title, text) => { setLegalContent({ title, text }); setLegalVisible(true); };
 
-  if (isLoading) return <View style={styles.splash}><ActivityIndicator size="large" color="#8B4513" /><Text style={{marginTop: 15, color: '#8B4513', fontWeight: 'bold'}}>Radar lädt...</Text></View>;
+  if (isLoading) return <View style={styles.splash}><ActivityIndicator size="large" color="#8B4513" /><Text style={{marginTop: 15, color: '#8B4513', fontWeight: 'bold'}}>{t.loading}</Text></View>;
 
   return (
     <View style={styles.container}>
@@ -1213,15 +1282,15 @@ export default function App() {
         <View>
           {activeTab === 'Radar' ? (
             <>
-              <Text style={styles.xpTitle}>{session ? "PROFI" : "GAST"}</Text>
+              <Text style={styles.xpTitle}>{session ? t.pro : t.guest}</Text>
               <Text style={styles.xpValue}>{stats.points} XP | {currentCity}</Text>
             </>
           ) : activeTab === 'Score' ? (
-            <Text style={styles.xpValue}>🏆 City Ranking</Text>
+            <Text style={styles.xpValue}>{t.cityRanking}</Text>
           ) : activeTab === 'Top' ? (
-            <Text style={styles.xpValue}>🥇 Top 20 Melder</Text>
+            <Text style={styles.xpValue}>{t.topReporters}</Text>
           ) : (
-            <Text style={styles.xpValue}>👀 Profil</Text>
+            <Text style={styles.xpValue}>{t.profileTitle}</Text>
           )}
         </View>
       </View>
@@ -1292,21 +1361,21 @@ export default function App() {
 
           {selectedPoop ? (
             <View style={[styles.infoCard, styles.shadow]}>
-              <Text style={styles.infoTitle}>{getReportTypeMeta(selectedPoop.size).icon} Fund in {selectedPoop.city}</Text>
+              <Text style={styles.infoTitle}>{getReportTypeMeta(selectedPoop.size).icon} {t.foundIn} {selectedPoop.city}</Text>
               <Text style={{color: '#666', marginBottom: 15, fontWeight: 'bold'}}>
-                Typ: {getReportTypeMeta(selectedPoop.size).label}
+                {t.type} {getLocalizedReportType(selectedPoop.size).label}
               </Text>
               <TouchableOpacity style={styles.deleteBtn} onPress={deletePoop}>
-                <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>ICH HAB'S WEGGERÄUMT ✅</Text>
+                <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>{t.cleaned}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setSelectedPoop(null)} style={{marginTop: 10}}>
-                <Text style={{textAlign: 'center', color: '#999', fontWeight: 'bold'}}>Schließen</Text>
+                <Text style={{textAlign: 'center', color: '#999', fontWeight: 'bold'}}>{t.close}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View style={[styles.overlay, styles.shadow]}>
               <TouchableOpacity style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}} onPress={() => setReportTypeExpanded(!reportTypeExpanded)}>
-                <Text style={styles.overlayLabel}>MELDETYP WÄHLEN</Text>
+                <Text style={styles.overlayLabel}>{t.reportType}</Text>
                 <Text style={{fontSize: 18}}>{reportTypeExpanded ? '▼' : '▶'}</Text>
               </TouchableOpacity>
               
@@ -1332,13 +1401,13 @@ export default function App() {
                             {item.icon}
                           </Text>
                         </TouchableOpacity>
-                        <Text style={{marginTop: 8, fontWeight: 'bold', color: '#333', fontSize: 12}}>{item.shortLabel}</Text>
+                        <Text style={{marginTop: 8, fontWeight: 'bold', color: '#333', fontSize: 12}}>{getLocalizedReportType(item.id).shortLabel}</Text>
                       </View>
                     ))}
                   </View>
 
                   <TouchableOpacity style={styles.mainReportBtn} onPress={reportPoop}>
-                    <Text style={styles.mainReportBtnText}>MELDUNG ABSENDEN</Text>
+                    <Text style={styles.mainReportBtnText}>{t.submitReport}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1349,8 +1418,8 @@ export default function App() {
 
       {activeTab === 'Score' && (
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreTitle}>Städte</Text>
-          <Text style={styles.scoreSubTitle}>Top 30 Städte</Text>
+          <Text style={styles.scoreTitle}>{t.cities}</Text>
+          <Text style={styles.scoreSubTitle}>{t.top30Cities}</Text>
           <FlatList 
             data={cityStats.slice(0, 30)} 
             keyExtractor={(item) => item.name} 
@@ -1369,8 +1438,8 @@ export default function App() {
 
       {activeTab === 'Top' && (
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreTitle}>Top 20 Melder</Text>
-          <Text style={styles.scoreSubTitle}>Nur Profile mit freigegebenen Nicknames</Text>
+          <Text style={styles.scoreTitle}>{t.top20Reporters}</Text>
+          <Text style={styles.scoreSubTitle}>{t.leaderboardNote}</Text>
           <FlatList
             data={leaderboard.slice(0, 20)}
             keyExtractor={(item) => item.id}
@@ -1385,7 +1454,7 @@ export default function App() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: '600' }}>{item.nickname}</Text>
-                    <Text style={{ color: '#666', marginTop: 4 }}>{item.totalReports} Meldungen • {item.points} XP</Text>
+                    <Text style={{ color: '#666', marginTop: 4 }}>{item.totalReports} {t.reports} • {item.points} XP</Text>
                     <Text style={{ color: '#8B4513', marginTop: 4, fontWeight: '700', fontSize: 12 }}>{userBadge.title}</Text>
                   </View>
                 </View>
@@ -1393,7 +1462,7 @@ export default function App() {
             }}
             ListEmptyComponent={() => (
               <View style={[styles.scoreItem, styles.shadow, { justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 16, color: '#666', textAlign: 'center' }}>Noch keine freigegebenen Melder in der Bestenliste.</Text>
+                <Text style={{ fontSize: 16, color: '#666', textAlign: 'center' }}>{t.noReporters}</Text>
               </View>
             )}
           />
@@ -1409,7 +1478,7 @@ export default function App() {
 
             {isEditingName ? (
               <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 15}}>
-                <TextInput style={styles.nameEditInput} value={editNameInput} onChangeText={setEditNameInput} autoFocus placeholder="Dein Name" />
+                <TextInput style={styles.nameEditInput} value={editNameInput} onChangeText={setEditNameInput} autoFocus placeholder={t.name} />
                 <TouchableOpacity onPress={saveName} style={styles.nameSaveBtn}><Text style={{color: 'white', fontWeight: 'bold'}}>OK</Text></TouchableOpacity>
               </View>
             ) : (
@@ -1422,13 +1491,37 @@ export default function App() {
                 )}
               </View>
             )}
-            <Text style={styles.profileEmailSub}>{session?.user?.email || "Melde dich an für mehr XP"}</Text>
+            <Text style={styles.profileEmailSub}>{session?.user?.email || t.signInForXp}</Text>
+          </View>
+
+          <View style={styles.languageSection}>
+            <Text style={styles.notificationSectionTitle}>{t.language}</Text>
+            <View style={styles.languageControls}>
+              <TouchableOpacity
+                accessibilityLabel="Deutsch"
+                accessibilityState={{ selected: language === 'de' }}
+                onPress={() => changeLanguage('de')}
+                style={[styles.languageButton, language === 'de' && styles.languageButtonActive]}
+              >
+                <Text style={styles.languageFlag}>🇩🇪</Text>
+                <Text style={styles.languageCode}>DE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel="English"
+                accessibilityState={{ selected: language === 'en' }}
+                onPress={() => changeLanguage('en')}
+                style={[styles.languageButton, language === 'en' && styles.languageButtonActive]}
+              >
+                <Text style={styles.languageFlag}>🇬🇧</Text>
+                <Text style={styles.languageCode}>EN</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={[styles.rankingCard, styles.shadow]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={styles.rankLabel}>AKTUELL ERREICHTER RANG</Text>
+                <Text style={styles.rankLabel}>{t.currentRank}</Text>
               </View>
 
               <View style={[styles.rankBadge, { backgroundColor: currentBadge.soft, borderColor: currentBadge.accent }]}> 
@@ -1440,18 +1533,18 @@ export default function App() {
 
           {session && (
             <View style={[styles.notificationSection, styles.shadow, { marginBottom: 25 }]}> 
-              <Text style={styles.notificationSectionTitle}>Profil für Bestenliste</Text>
+              <Text style={styles.notificationSectionTitle}>{t.leaderboardProfile}</Text>
               <TextInput
                 style={styles.inputField}
                 value={nicknameInput}
                 onChangeText={setNicknameInput}
-                placeholder="Dein Nickname"
+                placeholder={t.nickname}
                 autoCapitalize="words"
               />
               <View style={styles.settingRow}>
                 <View style={styles.settingCopy}>
-                  <Text style={styles.settingTitle}>Veröffentlichung erlauben</Text>
-                  <Text style={styles.settingHint}>Zeige deinen Nickname in der Top 20 Liste.</Text>
+                  <Text style={styles.settingTitle}>{t.allowPublishing}</Text>
+                  <Text style={styles.settingHint}>{t.publishingHint}</Text>
                 </View>
                 <Switch
                   value={publishInList}
@@ -1461,7 +1554,7 @@ export default function App() {
                 />
               </View>
               <TouchableOpacity style={[styles.mainReportBtn, { backgroundColor: '#8B4513', marginTop: 8 }]} onPress={saveProfileSettings}>
-                <Text style={styles.mainReportBtnText}>Speichern</Text>
+                <Text style={styles.mainReportBtnText}>{t.save}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1470,12 +1563,12 @@ export default function App() {
             <View style={[styles.statBox, styles.shadow]}>
               <Text style={{fontSize: 20}}>⭐</Text>
               <Text style={styles.statValue}>{stats.points}</Text>
-              <Text style={styles.statLabel}>PUNKTE</Text>
+              <Text style={styles.statLabel}>{t.points}</Text>
             </View>
             <View style={[styles.statBox, styles.shadow]}>
               <Text style={{fontSize: 20}}>💩</Text>
               <Text style={styles.statValue}>{stats.total}</Text>
-              <Text style={styles.statLabel}>MELDUNGEN</Text>
+              <Text style={styles.statLabel}>{t.reports}</Text>
             </View>
             <View style={[styles.statBox, styles.shadow]}>
               <Text style={{fontSize: 20}}>🧹</Text>
@@ -1485,37 +1578,37 @@ export default function App() {
           </View>
 
           <View style={[styles.notificationSection, styles.shadow, { marginBottom: 20 }]}> 
-            <Text style={styles.notificationSectionTitle}>Punktesystem</Text>
-            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>💩 Haufen: +10 XP</Text>
-            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>🛍️ Tüten: +5 XP</Text>
-            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>⚠️ Giftköder: +15 XP</Text>
-            <Text style={[styles.notificationStatusText, { marginBottom: 0 }]}>🧹 Aufräumen: +25 XP</Text>
+            <Text style={styles.notificationSectionTitle}>{t.pointSystem}</Text>
+            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>💩 {t.reportPoop}: +10 XP</Text>
+            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>🛍️ {t.reportBagsShort}: +5 XP</Text>
+            <Text style={[styles.notificationStatusText, { marginBottom: 8 }]}>⚠️ {t.reportPoison}: +15 XP</Text>
+            <Text style={[styles.notificationStatusText, { marginBottom: 0 }]}>🧹 {language === 'de' ? 'Aufräumen' : 'Clean up'}: +25 XP</Text>
           </View>
 
           <View style={[styles.notificationSection, styles.shadow]}>
-            <Text style={styles.notificationSectionTitle}>Benachrichtigungen</Text>
+            <Text style={styles.notificationSectionTitle}>{t.notifications}</Text>
             <Text style={styles.notificationStatusText}>
               {notificationStatus === 'granted'
-                ? 'Benachrichtigungen sind aktiviert.'
+                ? t.notificationsOn
                 : notificationStatus === 'denied'
-                ? 'Benachrichtigungen sind deaktiviert.'
-                : 'Benachrichtigungsstatus unklar.'}
+                ? t.notificationsOff
+                : t.notificationsUnknown}
             </Text>
             <Text style={styles.notificationStatusText}>Push-Token: {pushTokenStatus}</Text>
             {notificationStatus !== 'granted' && (
               <TouchableOpacity onPress={openNotificationSettings} style={styles.openSettingsBtn}>
-                <Text style={styles.openSettingsBtnText}>Einstellungen öffnen</Text>
+                <Text style={styles.openSettingsBtnText}>{t.openSettings}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={[styles.notificationSection, styles.shadow]}>
-            <Text style={styles.notificationSectionTitle}>Feedback beim Melden</Text>
+            <Text style={styles.notificationSectionTitle}>{t.reportFeedback}</Text>
 
             <View style={styles.settingRow}>
               <View style={styles.settingCopy}>
-                <Text style={styles.settingTitle}>Vibration</Text>
-                <Text style={styles.settingHint}>Kurzes Vibrationssignal beim Haufen melden.</Text>
+                <Text style={styles.settingTitle}>{t.vibration}</Text>
+                <Text style={styles.settingHint}>{t.vibrationHint}</Text>
               </View>
               <Switch
                 value={reportVibrationEnabled}
@@ -1532,8 +1625,8 @@ export default function App() {
 
             <View style={styles.settingRow}>
               <View style={styles.settingCopy}>
-                <Text style={styles.settingTitle}>Signalton</Text>
-                <Text style={styles.settingHint}>Kurzer Ton beim erfolgreichen Tippen auf Melden.</Text>
+                <Text style={styles.settingTitle}>{t.sound}</Text>
+                <Text style={styles.settingHint}>{t.soundHint}</Text>
               </View>
               <Switch
                 value={reportSoundEnabled}
@@ -1545,7 +1638,7 @@ export default function App() {
           </View>
 
           <View style={[styles.badgeSection, styles.shadow]}>
-            <Text style={styles.badgeSectionTitle}>BADGES & MELDETYPEN</Text>
+            <Text style={styles.badgeSectionTitle}>{t.badges}</Text>
             <View style={styles.badgeGrid}>
               {badgeDefinitions.map((badge) => {
                 const activeAccent = badge.accent || '#E7C68A';
@@ -1587,14 +1680,14 @@ export default function App() {
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity onPress={() => openLegal('Datenschutz & Impressum', datenschutzText)} style={{marginBottom: 10}}>
-              <Text style={styles.footerLink}>Datenschutz & Impressum</Text>
+            <TouchableOpacity onPress={() => openLegal(t.privacy, language === 'en' ? datenschutzTextEn : datenschutzText)} style={{marginBottom: 10}}>
+              <Text style={styles.footerLink}>{t.privacy}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               onPress={() => session ? supabase.auth.signOut() : setShowAuth(true)} 
               style={[styles.authMainTrigger, {backgroundColor: session ? '#555' : '#8B4513'}]}
             >
-              <Text style={styles.authMainTriggerText}>{session ? 'AUSLOGGEN' : 'LOGIN / REGISTRIEREN'}</Text>
+              <Text style={styles.authMainTriggerText}>{session ? t.logout : t.loginRegister}</Text>
             </TouchableOpacity>
             <Text style={styles.footerSignature}>edit by pifka07</Text>
           </View>
@@ -1612,10 +1705,10 @@ export default function App() {
       )}
 
       <View style={styles.navbar}>
-        {['Radar', 'Score', 'Top', 'Profil'].map(t => (
-          <TouchableOpacity key={t} onPress={() => setActiveTab(t)} style={styles.navItem}>
-            <Text style={{fontSize: 22, opacity: activeTab === t ? 1 : 0.4}}>{t === 'Radar' ? '🗺️' : (t === 'Score' ? '🏆' : (t === 'Top' ? '🥇' : '👀'))}</Text>
-            <Text style={[styles.navText, {color: activeTab === t ? '#8B4513' : '#999'}]}>{t}</Text>
+        {['Radar', 'Score', 'Top', 'Profil'].map(tab => (
+          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={styles.navItem}>
+            <Text style={{fontSize: 22, opacity: activeTab === tab ? 1 : 0.4}}>{tab === 'Radar' ? '🗺️' : (tab === 'Score' ? '🏆' : (tab === 'Top' ? '🥇' : '👀'))}</Text>
+            <Text style={[styles.navText, {color: activeTab === tab ? '#8B4513' : '#999'}]}>{tab === 'Radar' ? t.radar : tab === 'Score' ? t.cities : tab === 'Top' ? 'Top' : t.profile}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -1625,15 +1718,16 @@ export default function App() {
           <View style={styles.authForm}>
             <Text style={styles.authHeroTitle}>Haufen-Jäger</Text>
             <TextInput style={styles.inputField} placeholder="E-Mail" value={email} onChangeText={setEmail} autoCapitalize="none" />
-            <TextInput style={styles.inputField} placeholder="Passwort" value={password} onChangeText={setPassword} secureTextEntry />
+            <TextInput style={styles.inputField} placeholder={t.password} value={password} onChangeText={setPassword} secureTextEntry />
+            <Text style={styles.passwordHint}>{t.passwordHint}</Text>
             <TouchableOpacity style={styles.loginBtn} onPress={() => handleAuth('login')}>
-              <Text style={styles.loginBtnText}>EINLOGGEN</Text>
+              <Text style={styles.loginBtnText}>{t.login}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.signupBtn} onPress={() => handleAuth('signup')}>
-              <Text style={styles.signupBtnText}>Konto erstellen</Text>
+              <Text style={styles.signupBtnText}>{t.createAccount}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowAuth(false)} style={styles.cancelAuth}>
-              <Text style={{color: '#999', fontWeight: 'bold'}}>Abbrechen</Text>
+              <Text style={{color: '#999', fontWeight: 'bold'}}>{t.cancel}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -1648,11 +1742,11 @@ export default function App() {
             </ScrollView>
             {session && (
               <TouchableOpacity onPress={() => { setLegalVisible(false); deleteAccount(); }} style={{marginTop: 15, alignSelf: 'flex-start'}}>
-                <Text style={{color:'#666', textDecorationLine:'underline', fontSize:14}}>Konto löschen</Text>
+                <Text style={{color:'#666', textDecorationLine:'underline', fontSize:14}}>{t.deleteAccount}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => setLegalVisible(false)} style={{backgroundColor:'#8B4513', padding:12, borderRadius:12, marginTop:15}}>
-              <Text style={{color:'white', fontWeight:'bold', textAlign:'center', fontSize:16}}>Schließen</Text>
+              <Text style={{color:'white', fontWeight:'bold', textAlign:'center', fontSize:16}}>{t.close}</Text>
             </TouchableOpacity>
           </View>
         </View>
