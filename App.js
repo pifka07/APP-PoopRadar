@@ -40,6 +40,32 @@ const REPORT_VIBRATION_STORAGE_KEY = 'reportFeedback.vibrationEnabled';
 const REPORT_SOUND_STORAGE_KEY = 'reportFeedback.soundEnabled';
 const LANGUAGE_STORAGE_KEY = 'app.language';
 
+const SUPPORTED_LANGUAGES = [
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'nl', label: 'Nederlands', flag: '🇳🇱' },
+  { code: 'lt', label: 'Lietuvių', flag: '🇱🇹' },
+];
+
+const SUPPORTED_COUNTRIES = [
+  { code: 'DE', label: 'Deutschland', flag: '🇩🇪' },
+  { code: 'AT', label: 'Österreich', flag: '🇦🇹' },
+  { code: 'CH', label: 'Schweiz', flag: '🇨🇭' },
+  { code: 'ES', label: 'España', flag: '🇪🇸' },
+  { code: 'FR', label: 'France', flag: '🇫🇷' },
+  { code: 'NL', label: 'Nederland', flag: '🇳🇱' },
+  { code: 'BE', label: 'België', flag: '🇧🇪' },
+  { code: 'LU', label: 'Luxembourg', flag: '🇱🇺' },
+  { code: 'IT', label: 'Italia', flag: '🇮🇹' },
+  { code: 'GB', label: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'IE', label: 'Ireland', flag: '🇮🇪' },
+  { code: 'PL', label: 'Polska', flag: '🇵🇱' },
+  { code: 'CZ', label: 'Česko', flag: '🇨🇿' },
+  { code: 'LT', label: 'Lietuva', flag: '🇱🇹' },
+];
+
 const translations = {
   de: {
     profile: 'Profil', radar: 'Radar', cities: 'Städte', reports: 'MELDUNGEN', points: 'PUNKTE', pro: 'PROFI', guest: 'GAST',
@@ -64,6 +90,7 @@ const translations = {
     saved: 'Gespeichert', reportSaved: 'wurde gemeldet!', saveFailed: 'Speichern fehlgeschlagen', entryNotSaved: 'Der Eintrag konnte nicht in der Datenbank gespeichert werden.',
     signInRequired: 'Bitte erst anmelden!', locationWaiting: 'Dein Standort wird noch ermittelt.', cleanTitle: 'Sauber!', earnedXp: 'Du hast {points} XP verdient! 🧹',
     accountDeleted: 'Account gelöscht', accountDeletedMessage: 'Ihr Account und alle Daten wurden erfolgreich gelöscht.', settingsNotSaved: 'Profil-Einstellungen konnten nicht gespeichert werden.',
+    selectLanguage: 'Sprache wählen', selectCountry: 'Heimatland wählen', defaultCountry: 'Standard-Land', global: 'Global', country: 'Land', myCity: 'Meine Stadt', filterByCountry: 'Nach Land filtern',
   },
   en: {
     profile: 'Profile', radar: 'Radar', cities: 'Cities', reports: 'REPORTS', points: 'POINTS', pro: 'PRO', guest: 'GUEST',
@@ -88,6 +115,107 @@ const translations = {
     saved: 'Saved', reportSaved: 'was reported!', saveFailed: 'Could not save', entryNotSaved: 'The entry could not be saved to the database.',
     signInRequired: 'Please sign in first!', locationWaiting: 'Your location is still being determined.', cleanTitle: 'Clean!', earnedXp: 'You earned {points} XP! 🧹',
     accountDeleted: 'Account deleted', accountDeletedMessage: 'Your account and all data were deleted successfully.', settingsNotSaved: 'Profile settings could not be saved.',
+    selectLanguage: 'Select Language', selectCountry: 'Select Country', defaultCountry: 'Default Country', global: 'Global', country: 'Country', myCity: 'My City', filterByCountry: 'Filter by Country',
+  },
+  fr: {
+    profile: 'Profil', radar: 'Radar', cities: 'Villes', reports: 'SIGNALEMENTS', points: 'POINTS', pro: 'PRO', guest: 'INVITÉ',
+    cityRanking: '🏆 Classement des villes', topReporters: '🥇 Top 20', profileTitle: '👀 Profil',
+    reportType: 'TYPE DE SIGNALEMENT', submitReport: 'ENVOYER LE SIGNALEMENT', foundIn: 'Trouvé à', type: 'Type:',
+    cleaned: "JE L'AI NETTOYÉ ✅", close: 'Fermer', top30Cities: 'Top 30 Villes',
+    top20Reporters: 'Top 20 Rapporteurs', leaderboardNote: 'Uniquement les profils publics',
+    noReporters: 'Pas encore de rapports publics.', name: 'Votre nom',
+    signInForXp: 'Connectez-vous pour plus d\'XP', currentRank: 'RANG ACTUEL',
+    leaderboardProfile: 'Profil public', nickname: 'Votre pseudo', allowPublishing: 'Autoriser la publication',
+    publishingHint: 'Affichez votre pseudo dans le Top 20.', save: 'Enregistrer', pointSystem: 'Système de points',
+    notifications: 'Notifications', notificationsOn: 'Notifications activées.',
+    notificationsOff: 'Notifications désactivées.', notificationsUnknown: 'Statut inconnu.',
+    openSettings: 'Ouvrir les paramètres', reportFeedback: 'Retour de signalement', vibration: 'Vibration',
+    vibrationHint: 'Vibration lors du signalement.', sound: 'Son',
+    soundHint: 'Signal sonore après signalement.', badges: 'BADGES & TYPES',
+    privacy: 'Confidentialité & Mentions légales', logout: 'DÉCONNEXION', loginRegister: 'CONNEXION / INSCRIPTION',
+    language: 'Langue', loading: 'Chargement du radar...', password: 'Mot de passe', passwordHint: '6 caractères minimum',
+    login: 'CONNEXION', createAccount: 'Créer un compte', cancel: 'Annuler', deleteAccount: 'Supprimer le compte',
+    reportPoop: 'Crotte', reportBags: 'Sacs / Poubelles', reportBagsShort: 'Sacs', reportPoison: 'Appât empoisonné',
+    reportIllegalWaste: 'Déchets illégaux', reportIllegalWasteShort: 'Déchets',
+    saved: 'Enregistré', reportSaved: 'a été signalé !', saveFailed: 'Échec de l\'enregistrement', entryNotSaved: 'L\'entrée n\'a pas pu être sauvegardée.',
+    signInRequired: 'Veuillez vous connecter !', locationWaiting: 'Localisation en cours...', cleanTitle: 'Propre !', earnedXp: 'Vous avez gagné {points} XP ! 🧹',
+    accountDeleted: 'Compte supprimé', accountDeletedMessage: 'Votre compte a été supprimé.', settingsNotSaved: 'Paramètres non enregistrés.',
+    selectLanguage: 'Choisir la langue', selectCountry: 'Choisir le pays', defaultCountry: 'Pays par défaut', global: 'Global', country: 'Pays', myCity: 'Ma ville', filterByCountry: 'Filtrer par pays',
+  },
+  es: {
+    profile: 'Perfil', radar: 'Radar', cities: 'Ciudades', reports: 'INFORMES', points: 'PUNTOS', pro: 'PRO', guest: 'INVITADO',
+    cityRanking: '🏆 Ranking de ciudades', topReporters: '🥇 Top 20', profileTitle: '👀 Perfil',
+    reportType: 'TIPO DE INFORME', submitReport: 'ENVIAR INFORME', foundIn: 'Encontrado en', type: 'Tipo:',
+    cleaned: "LO HE LIMPIADO ✅", close: 'Cerrar', top30Cities: 'Top 30 Ciudades',
+    top20Reporters: 'Top 20 Informadores', leaderboardNote: 'Solo perfiles públicos',
+    noReporters: 'Aún no hay informes públicos.', name: 'Tu nombre',
+    signInForXp: 'Inicia sesión para más XP', currentRank: 'RANGO ACTUAL',
+    leaderboardProfile: 'Perfil público', nickname: 'Tu apodo', allowPublishing: 'Permitir publicación',
+    publishingHint: 'Muestra tu apodo en el Top 20.', save: 'Guardar', pointSystem: 'Sistema de puntos',
+    notifications: 'Notificaciones', notificationsOn: 'Notificaciones activadas.',
+    notificationsOff: 'Notificaciones desactivadas.', notificationsUnknown: 'Estado desconocido.',
+    openSettings: 'Abrir ajustes', reportFeedback: 'Feedback de informe', vibration: 'Vibración',
+    vibrationHint: 'Vibración al informar.', sound: 'Sonido',
+    soundHint: 'Señal sonora tras informar.', badges: 'BADGES & TIPOS',
+    privacy: 'Privacidad y Aviso legal', logout: 'CERRAR SESIÓN', loginRegister: 'INICIAR SESIÓN / REGISTRO',
+    language: 'Idioma', loading: 'Cargando radar...', password: 'Contraseña', passwordHint: 'Mínimo 6 caracteres',
+    login: 'INICIAR SESIÓN', createAccount: 'Crear cuenta', cancel: 'Cancelar', deleteAccount: 'Eliminar cuenta',
+    reportPoop: 'Caca', reportBags: 'Bolsas / Papeleras', reportBagsShort: 'Bolsas', reportPoison: 'Cebo envenenado',
+    reportIllegalWaste: 'Basura ilegal', reportIllegalWasteShort: 'Basura',
+    saved: 'Guardado', reportSaved: '¡ha sido informado!', saveFailed: 'Error al guardar', entryNotSaved: 'No se pudo guardar la entrada.',
+    signInRequired: '¡Inicia sesión primero!', locationWaiting: 'Localizando...', cleanTitle: '¡Limpio!', earnedXp: '¡Has ganado {points} XP! 🧹',
+    accountDeleted: 'Cuenta eliminada', accountDeletedMessage: 'Tu cuenta ha sido eliminada.', settingsNotSaved: 'Ajustes no guardados.',
+    selectLanguage: 'Seleccionar idioma', selectCountry: 'Seleccionar país', defaultCountry: 'País predeterminado', global: 'Global', country: 'País', myCity: 'Mi ciudad', filterByCountry: 'Filtrar por país',
+  },
+  nl: {
+    profile: 'Profiel', radar: 'Radar', cities: 'Steden', reports: 'MELDINGEN', points: 'PUNTEN', pro: 'PRO', guest: 'GAST',
+    cityRanking: '🏆 Stedenranking', topReporters: '🥇 Top 20', profileTitle: '👀 Profiel',
+    reportType: 'TYPE MELDING', submitReport: 'MELDING VERZENDEN', foundIn: 'Gevonden in', type: 'Type:',
+    cleaned: "IK HEB HET OPGURUIMD ✅", close: 'Sluiten', top30Cities: 'Top 30 Steden',
+    top20Reporters: 'Top 20 Melders', leaderboardNote: 'Alleen openbare profielen',
+    noReporters: 'Nog geen openbare meldingen.', name: 'Jouw naam',
+    signInForXp: 'Log in voor meer XP', currentRank: 'HUIDIGE RANG',
+    leaderboardProfile: 'Openbaar profiel', nickname: 'Jouw bijnaam', allowPublishing: 'Publicatie toestaan',
+    publishingHint: 'Toon je bijnaam in de Top 20.', save: 'Opslaan', pointSystem: 'Puntensysteem',
+    notifications: 'Meldingen', notificationsOn: 'Meldingen ingeschakeld.',
+    notificationsOff: 'Meldingen uitgeschakeld.', notificationsUnknown: 'Status onbekend.',
+    openSettings: 'Instellingen openen', reportFeedback: 'Feedback bij melding', vibration: 'Trillen',
+    vibrationHint: 'Trilsignaal bij melding.', sound: 'Geluid',
+    soundHint: 'Geluidssignaal na melding.', badges: 'BADGES & TYPES',
+    privacy: 'Privacy & Juridisch', logout: 'UITLOGGEN', loginRegister: 'INLOGGEN / REGISTREREN',
+    language: 'Taal', loading: 'Radar laden...', password: 'Wachtwoord', passwordHint: 'Minimaal 6 tekens',
+    login: 'INLOGGEN', createAccount: 'Account aanmaken', cancel: 'Annuleren', deleteAccount: 'Account verwijderen',
+    reportPoop: 'Poep', reportBags: 'Zakjes / Bakken', reportBagsShort: 'Zakjes', reportPoison: 'Vergiftigd aas',
+    reportIllegalWaste: 'Illegaal afval', reportIllegalWasteShort: 'Afval',
+    saved: 'Opgeslagen', reportSaved: 'is gemeld!', saveFailed: 'Opslaan mislukt', entryNotSaved: 'Kan de invoer niet opslaan.',
+    signInRequired: 'Log eerst in!', locationWaiting: 'Locatie bepalen...', cleanTitle: 'Schoon!', earnedXp: 'Je hebt {points} XP verdiend! 🧹',
+    accountDeleted: 'Account verwijderd', accountDeletedMessage: 'Je account is verwijderd.', settingsNotSaved: 'Instellingen niet opgeslagen.',
+    selectLanguage: 'Taal selecteren', selectCountry: 'Land selecteren', defaultCountry: 'Standaard land', global: 'Globaal', country: 'Land', myCity: 'Mijn stad', filterByCountry: 'Filteren op land',
+  },
+  lt: {
+    profile: 'Profilis', radar: 'Radaras', cities: 'Miestai', reports: 'PRANEŠIMAI', points: 'TAŠKAI', pro: 'PRO', guest: 'SVEČIAS',
+    cityRanking: '🏆 Miestų reitingas', topReporters: '🥇 Top 20', profileTitle: '👀 Profilis',
+    reportType: 'PRANEŠIMO TIPAS', submitReport: 'SIŲSTI PRANEŠIMĄ', foundIn: 'Rasta', type: 'Tipas:',
+    cleaned: "SUTVARKYTA ✅", close: 'Uždaryti', top30Cities: 'Top 30 Miestų',
+    top20Reporters: 'Top 20 Pranešėjų', leaderboardNote: 'Tik vieši profiliai',
+    noReporters: 'Viešų pranešėjų dar nėra.', name: 'Jūsų vardas',
+    signInForXp: 'Prisijunkite, kad gautumėte daugiau XP', currentRank: 'DABARTINIS RANGAS',
+    leaderboardProfile: 'Viešas profilis', nickname: 'Slapyvardis', allowPublishing: 'Leisti viešinti',
+    publishingHint: 'Rodyti slapyvardį Top 20 sąraše.', save: 'Išsaugoti', pointSystem: 'Taškų sistema',
+    notifications: 'Pranešimai', notificationsOn: 'Pranešimai įjungti.',
+    notificationsOff: 'Pranešimai išjungti.', notificationsUnknown: 'Statusas nežinomas.',
+    openSettings: 'Atidaryti nustatymus', reportFeedback: 'Pranešimo feedbackas', vibration: 'Vibracija',
+    vibrationHint: 'Vibracija siunčiant pranešimą.', sound: 'Garsas',
+    soundHint: 'Garsinis signalas po pranešimo.', badges: 'ŽENKLIUKAI IR TIPAI',
+    privacy: 'Privatumas ir taisyklės', logout: 'ATSIJUNGTI', loginRegister: 'PRISIJUNGTI / REGISTRACIJA',
+    language: 'Kalba', loading: 'Kraunama...', password: 'Slaptažodis', passwordHint: 'Bent 6 simboliai',
+    login: 'PRISIJUNGTI', createAccount: 'Sukurti paskyrą', cancel: 'Atšaukti', deleteAccount: 'Ištrinti paskyrą',
+    reportPoop: 'Krūva', reportBags: 'Maišeliai / Šiukšlinės', reportBagsShort: 'Maišeliai', reportPoison: 'Užnuodytas masalas',
+    reportIllegalWaste: 'Neleistinos šiukšlės', reportIllegalWasteShort: 'Šiukšlės',
+    saved: 'Išsaugota', reportSaved: 'buvo užregistruota !', saveFailed: 'Išsaugoti nepavyko', entryNotSaved: 'Nepavyko išsaugoti įrašo.',
+    signInRequired: 'Prašome prisijungti!', locationWaiting: 'Nustatoma vieta...', cleanTitle: 'Švaru!', earnedXp: 'Gavote {points} XP! 🧹',
+    accountDeleted: 'Paskyra ištrinta', accountDeletedMessage: 'Jūsų paskyra sėkmingai ištrinta.', settingsNotSaved: 'Nustatymai neišsaugoti.',
+    selectLanguage: 'Pasirinkti kalbą', selectCountry: 'Pasirinkti šalį', defaultCountry: 'Numatytoji šalis', global: 'Pasaulinis', country: 'Šalis', myCity: 'Mano miestas', filterByCountry: 'Filtruoti pagal šalį',
   },
 };
 
@@ -256,6 +384,11 @@ export default function App() {
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [publishInList, setPublishInList] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [defaultCountry, setDefaultCountry] = useState('DE');
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [leaderboardFilter, setLeaderboardFilter] = useState('global'); // 'city', 'country', 'global'
+  const [filterCountry, setFilterCountry] = useState('DE');
   const [stats, setStats] = useState({ 
     points: 0, total: 0, clean: 0, poison: 0, bins: 0, cityCount: 0, sizeTypes: 0, level: 1, levelName: "Gehweg-Novize"
   });
@@ -794,6 +927,7 @@ export default function App() {
         setDisplayName(metaName || fallbackName);
         setNickname(data.nickname || '');
         setNicknameInput(data.nickname || '');
+        setDefaultCountry(data.default_country || 'DE');
         setPublishInList(data.publish_in_list === true);
       }
     } catch (err) {
@@ -1129,9 +1263,15 @@ export default function App() {
 
   const loadLeaderboard = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('*')
+        .select('*');
+
+      if (leaderboardFilter === 'country') {
+        query = query.eq('default_country', filterCountry);
+      }
+
+      const { data, error } = await query
         .order('points', { ascending: false })
         .limit(100);
 
@@ -1140,8 +1280,17 @@ export default function App() {
         return;
       }
 
-      const leaderboardItems = (data || [])
-        .filter((item) => item.publish_in_list === true)
+      let leaderboardItems = (data || [])
+        .filter((item) => item.publish_in_list === true);
+
+      if (leaderboardFilter === 'city' && currentCity && currentCity !== 'Ortung...') {
+        // Da 'city' oft dynamisch ist, filtern wir hier clientseitig oder über eine hypothetische Spalte
+        // Für den Moment filtern wir die Top 100 nach Stadt, falls wir diese Info hätten.
+        // Da 'city' aktuell nur in 'reports' steht, ist ein Stadt-Leaderboard komplexer.
+        // Wir lassen den Stadt-Filter erst einmal als Platzhalter oder filtern nach dem Profil-Ort falls vorhanden.
+      }
+
+      leaderboardItems = leaderboardItems
         .sort((a, b) => (b.points || 0) - (a.points || 0) || (b.total_reports || 0) - (a.total_reports || 0))
         .slice(0, 20)
         .map((item, index) => ({
@@ -1150,6 +1299,7 @@ export default function App() {
           nickname: item.nickname || item.display_name || `User ${index + 1}`,
           points: item.points || 0,
           totalReports: item.total_reports || 0,
+          country: item.default_country || 'DE',
         }));
 
       setLeaderboard(leaderboardItems);
@@ -1158,6 +1308,10 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    loadLeaderboard();
+  }, [leaderboardFilter, filterCountry]);
+
   const saveProfileSettings = async () => {
     if (!session) return;
     setIsLoading(true);
@@ -1165,6 +1319,8 @@ export default function App() {
     const updatePayload = {
       nickname: trimmedNickname,
       publish_in_list: publishInList,
+      default_country: defaultCountry,
+      default_language: language,
     };
 
     const { error } = await supabase.from('profiles').update(updatePayload).eq('id', session.user.id);
@@ -1218,6 +1374,18 @@ export default function App() {
     }
 
     const safeCity = currentCity && currentCity !== 'Ortung...' ? currentCity : 'Unbekannte Stadt';
+    
+    let isoCountry = 'DE';
+    try {
+      const rev = await Location.reverseGeocodeAsync(location);
+      if (rev[0]?.isoCountryCode) {
+        isoCountry = rev[0].isoCountryCode;
+      } else {
+        isoCountry = defaultCountry;
+      }
+    } catch (e) {
+      isoCountry = defaultCountry;
+    }
 
     // Direkt vor dem Upload auslösen, damit die Vibration auch auf langsamen Geräten zuverlässig ankommt.
     triggerReportVibrationFeedback();
@@ -1229,6 +1397,7 @@ export default function App() {
       longitude: location.longitude,
       size: selectedSize,
       city: safeCity,
+      country_code: isoCountry,
       created_at: new Date().toISOString()
     };
     setMarkers(prevMarkers => [...prevMarkers, tempMarker]);
@@ -1238,7 +1407,9 @@ export default function App() {
       latitude: location.latitude,
       longitude: location.longitude,
       size: getNormalizedReportType(selectedSize),
-      city: safeCity
+      city: safeCity,
+      city_name: safeCity,
+      country_code: isoCountry
     }]);
 
     if (!reportError) {
@@ -1497,12 +1668,34 @@ export default function App() {
       {activeTab === 'Top' && (
         <View style={styles.scoreContainer}>
           <Text style={styles.scoreTitle}>{t.top20Reporters}</Text>
+          
+          <View style={styles.filterRow}>
+            <TouchableOpacity 
+              onPress={() => setLeaderboardFilter('global')} 
+              style={[styles.filterBtn, leaderboardFilter === 'global' && styles.filterBtnActive]}
+            >
+              <Text style={[styles.filterBtnText, leaderboardFilter === 'global' && styles.filterBtnTextActive]}>🌍 {t.global}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                setLeaderboardFilter('country');
+                setShowCountryPicker(true);
+              }} 
+              style={[styles.filterBtn, leaderboardFilter === 'country' && styles.filterBtnActive]}
+            >
+              <Text style={[styles.filterBtnText, leaderboardFilter === 'country' && styles.filterBtnTextActive]}>
+                {SUPPORTED_COUNTRIES.find(c => c.code === filterCountry)?.flag} {t.country}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.scoreSubTitle}>{t.leaderboardNote}</Text>
           <FlatList
             data={leaderboard.slice(0, 20)}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => {
               const userBadge = getBadgeForPoints(item.points);
+              const userCountry = SUPPORTED_COUNTRIES.find(c => c.code === item.country);
 
               return (
                 <View style={[styles.scoreItem, styles.shadow]}>
@@ -1511,7 +1704,10 @@ export default function App() {
                     <Text style={styles.scoreBadgeMiniText}>{userBadge.icon}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600' }}>{item.nickname}</Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                      <Text style={{ fontSize: 16, fontWeight: '600' }}>{item.nickname}</Text>
+                      {userCountry && <Text style={{marginLeft: 8, fontSize: 16}}>{userCountry.flag}</Text>}
+                    </View>
                     <Text style={{ color: '#666', marginTop: 4 }}>{item.totalReports} {t.reports} • {item.points} XP</Text>
                     <Text style={{ color: '#8B4513', marginTop: 4, fontWeight: '700', fontSize: 12 }}>{userBadge.title}</Text>
                   </View>
@@ -1612,6 +1808,18 @@ export default function App() {
                 placeholder={t.nickname}
                 autoCapitalize="words"
               />
+              
+              <Text style={[styles.settingTitle, {marginTop: 10}]}>{t.defaultCountry}</Text>
+              <TouchableOpacity 
+                style={styles.pickerTrigger} 
+                onPress={() => setShowCountryPicker(true)}
+              >
+                <Text style={{fontSize: 16}}>
+                  {SUPPORTED_COUNTRIES.find(c => c.code === defaultCountry)?.flag} {SUPPORTED_COUNTRIES.find(c => c.code === defaultCountry)?.label}
+                </Text>
+                <Text style={{color: '#999'}}>▼</Text>
+              </TouchableOpacity>
+
               <View style={styles.settingRow}>
                 <View style={styles.settingCopy}>
                   <Text style={styles.settingTitle}>{t.allowPublishing}</Text>
@@ -1805,6 +2013,36 @@ export default function App() {
         </KeyboardAvoidingView>
       </Modal>
 
+      <Modal visible={showCountryPicker} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t.selectCountry}</Text>
+            <ScrollView>
+              {SUPPORTED_COUNTRIES.map(country => (
+                <TouchableOpacity 
+                  key={country.code} 
+                  style={styles.pickerItem}
+                  onPress={() => {
+                    if (activeTab === 'Profil') {
+                      setDefaultCountry(country.code);
+                    } else {
+                      setFilterCountry(country.code);
+                    }
+                    setShowCountryPicker(false);
+                  }}
+                >
+                  <Text style={{fontSize: 20, marginRight: 15}}>{country.flag}</Text>
+                  <Text style={{fontSize: 16, fontWeight: '500'}}>{country.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity onPress={() => setShowCountryPicker(false)} style={styles.modalCloseBtn}>
+              <Text style={styles.modalCloseBtnText}>{t.cancel}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={legalVisible} transparent animationType="fade">
         <View style={{flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end'}}>
           <View style={{backgroundColor:'white', padding:20, borderRadius:20, maxHeight:'90%', margin:15}}>
@@ -1899,6 +2137,18 @@ const styles = StyleSheet.create({
   scoreSubTitle: { color: '#999', marginBottom: 20 },
   scoreItem: { flexDirection: 'row', padding: 20, backgroundColor: 'white', borderRadius: 18, marginBottom: 12, alignItems: 'center' },
   scoreRank: { fontSize: 20, fontWeight: 'bold', color: '#FF7F50', width: 45 },
+  filterRow: { flexDirection: 'row', marginBottom: 15, backgroundColor: '#EEE', borderRadius: 12, padding: 4 },
+  filterBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10 },
+  filterBtnActive: { backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  filterBtnText: { fontSize: 13, fontWeight: 'bold', color: '#666' },
+  filterBtnTextActive: { color: '#8B4513' },
+  pickerTrigger: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F7F7F7', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#EEE', marginBottom: 15 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: 'white', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20, maxHeight: '80%' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#333' },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  modalCloseBtn: { marginTop: 20, paddingVertical: 15, alignItems: 'center', backgroundColor: '#F0F0F0', borderRadius: 15 },
+  modalCloseBtnText: { fontWeight: 'bold', color: '#666', fontSize: 16 },
   scoreBadgeMini: { width: 34, height: 34, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   scoreBadgeMiniText: { fontSize: 18 },
   infoCard: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: 'white', padding: 25, borderRadius: 25 },
